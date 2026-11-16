@@ -3,6 +3,8 @@
 **A neutral rental deposit escrow for students, running on Avalanche.**
 Team Assembly, Team1 Vietnam UniHack 2026.
 
+Full project proposal (target users, Vietnam context, solution, legal analysis): [docs/PROPOSAL.md](docs/PROPOSAL.md) · [PDF](docs/PROPOSAL.pdf)
+
 *"Cọc" is Vietnamese for "deposit".* The deposit sits in a smart contract instead of in the landlord's pocket. Nobody, not the mediator and not the team that built this, can send it anywhere except to the tenant or the landlord.
 
 ## The problem
@@ -69,6 +71,7 @@ web/                  Next.js app (UI + relayer + evidence store)
   src/lib/i18n.tsx               English and Vietnamese UI text
   src/lib/deployment.json        Contract addresses (written by the deploy script)
 docs/
+  PROPOSAL.md         Full project proposal (also as PROPOSAL.pdf)
   IDEA.md             Idea, scoring rubric fit, and answers to hard questions
 ```
 
