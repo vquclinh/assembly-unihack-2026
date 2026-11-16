@@ -14,22 +14,22 @@ export default function ProfilePage() {
   const p = t.profile;
   const valid = isAddress(address);
   const { data } = useStats(valid ? (address as Address) : undefined);
-  if (!valid) return <p className="text-stone-600">{p.invalid}</p>;
-  if (!data) return <Spinner className="text-stone-400" />;
+  if (!valid) return <p className="text-zinc-400">{p.invalid}</p>;
+  if (!data) return <Spinner className="text-zinc-500" />;
   const vl = verdict(data.landlord, "landlord", t);
   const vt = verdict(data.tenant, "tenant", t);
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight">{p.title}</h1>
-        <p className="break-all font-mono text-sm text-stone-500">{address}</p>
+        <p className="break-all font-mono text-sm text-zinc-400">{address}</p>
         {explorerAddress(address) && (
-          <a href={explorerAddress(address)} className="text-xs text-stone-500 underline" target="_blank" rel="noreferrer">
+          <a href={explorerAddress(address)} className="text-xs text-zinc-400 underline" target="_blank" rel="noreferrer">
             {p.explorer}
           </a>
         )}
       </div>
-      <p className="max-w-2xl text-sm text-stone-600">{p.body}</p>
+      <p className="max-w-2xl text-sm text-zinc-400">{p.body}</p>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <div className="mb-3 flex items-center justify-between gap-2">

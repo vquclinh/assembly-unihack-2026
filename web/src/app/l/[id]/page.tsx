@@ -21,13 +21,13 @@ export default function LeasePage() {
   const t = useT();
   const title = useTermsTitle(snap?.lease.termsHash);
 
-  if (!isDeployed) return <p className="text-stone-600">{t.lease.notConfigured}</p>;
-  if (id === null) return <p className="text-stone-600">{t.lease.invalidId}</p>;
-  if (error && !snap) return <p className="text-rose-700">{t.lease.readFail(error.message)}</p>;
-  if (!snap) return <Spinner className="text-stone-400" />;
+  if (!isDeployed) return <p className="text-zinc-400">{t.lease.notConfigured}</p>;
+  if (id === null) return <p className="text-zinc-400">{t.lease.invalidId}</p>;
+  if (error && !snap) return <p className="text-rose-300">{t.lease.readFail(error.message)}</p>;
+  if (!snap) return <Spinner className="text-zinc-500" />;
 
   const L = snap.lease;
-  if (L.status === Status.None) return <p className="text-stone-600">{t.lease.notFound(id.toString())}</p>;
+  if (L.status === Status.None) return <p className="text-zinc-400">{t.lease.notFound(id.toString())}</p>;
 
   const isLandlord = w.active && L.landlord.toLowerCase() === w.active.address.toLowerCase();
   const hasReport = L.conditionHash !== zeroHash;
@@ -37,7 +37,7 @@ export default function LeasePage() {
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-stone-500">{t.lease.number(id.toString())}</span>
+          <span className="text-sm text-zinc-400">{t.lease.number(id.toString())}</span>
           <Badge tone={STATUS_TONE[L.status]}>{t.status[L.status]}</Badge>
         </div>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title ?? t.lease.roomFallback}</h1>

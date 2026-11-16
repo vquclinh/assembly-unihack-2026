@@ -112,7 +112,7 @@ export default function CreatePage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight">{c.title}</h1>
-        <p className="mt-1 text-stone-600">{c.lead}</p>
+        <p className="mt-1 text-zinc-400">{c.lead}</p>
       </div>
 
       <Card className="space-y-4">
@@ -161,8 +161,8 @@ export default function CreatePage() {
             </select>
           </Field>
         </div>
-        <label className="flex items-start gap-3 rounded-xl bg-stone-50 p-3 text-sm">
-          <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={yieldOptIn} onChange={(e) => setYieldOptIn(e.target.checked)} />
+        <label className="flex items-start gap-3 rounded-none bg-zinc-900 p-3 text-sm">
+          <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-600" checked={yieldOptIn} onChange={(e) => setYieldOptIn(e.target.checked)} />
           <span>
             <b>{c.yieldTitle}</b> {c.yieldBody}
           </span>
@@ -171,7 +171,7 @@ export default function CreatePage() {
 
       <Card className="space-y-4">
         <h2 className="font-bold">{c.mediator}</h2>
-        <p className="text-sm text-stone-600">{c.mediatorBody}</p>
+        <p className="text-sm text-zinc-400">{c.mediatorBody}</p>
         {mediatorChoices.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {mediatorChoices.map((m) => (
@@ -179,7 +179,7 @@ export default function CreatePage() {
                 key={m.address}
                 type="button"
                 onClick={() => setMediator(m.address)}
-                className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-stone-100"
+                className="border border-zinc-700 px-3 py-1.5 font-mono text-xs font-medium text-zinc-300 transition-colors hover:border-zinc-400 hover:text-white"
               >
                 {m.name} · {shortAddr(m.address)}
               </button>
@@ -190,7 +190,7 @@ export default function CreatePage() {
           <input className={`${inputCls} font-mono text-sm`} value={mediator} onChange={(e) => setMediator(e.target.value)} placeholder="0x…" />
         </Field>
         <details className="text-sm">
-          <summary className="cursor-pointer text-stone-600">{c.lockSummary}</summary>
+          <summary className="cursor-pointer text-zinc-400">{c.lockSummary}</summary>
           <div className="mt-3">
             <Field label={c.lockAddress} hint={c.lockHint}>
               <input className={`${inputCls} font-mono text-sm`} value={lockTenant} onChange={(e) => setLockTenant(e.target.value)} placeholder="0x…" />
@@ -199,8 +199,8 @@ export default function CreatePage() {
         </details>
       </Card>
 
-      <div className="sticky bottom-4 rounded-2xl border border-stone-200 bg-white/95 p-4 shadow-lg backdrop-blur">
-        {problems.length > 0 && <p className="mb-2 text-sm text-stone-500">{problems[0]}</p>}
+      <div className="sticky bottom-4 rounded-none border border-zinc-800 bg-surface/95 p-4 shadow-lg backdrop-blur">
+        {problems.length > 0 && <p className="mb-2 text-sm text-zinc-400">{problems[0]}</p>}
         <Button className="w-full text-base" loading={busy} disabled={!isDeployed || !w.active} onClick={submit}>
           {w.active ? c.submit : c.needWallet}
         </Button>

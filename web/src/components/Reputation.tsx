@@ -31,7 +31,7 @@ export function ReputationBadge({ address, role }: { address: Address; role: "la
   return (
     <Link href={`/u/${address}`} className="inline-flex items-center gap-1.5">
       <Badge tone={v.tone}>{v.label}</Badge>
-      {s.completed > 0 && <span className="text-xs text-stone-500">{t.rep.leases(s.completed)}</span>}
+      {s.completed > 0 && <span className="text-xs text-zinc-400">{t.rep.leases(s.completed)}</span>}
     </Link>
   );
 }
@@ -50,9 +50,9 @@ export function StatsGrid({ s, role }: { s: Stats; role: "landlord" | "tenant" }
   return (
     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {items.map(([k, v, bad]) => (
-        <div key={k} className="rounded-xl bg-stone-50 p-3">
-          <dt className="text-xs text-stone-500">{k}</dt>
-          <dd className={bad ? "mt-1 text-lg font-bold text-rose-700" : "mt-1 text-lg font-bold text-stone-900"}>{v}</dd>
+        <div key={k} className="rounded-none bg-zinc-900 p-3">
+          <dt className="text-xs text-zinc-400">{k}</dt>
+          <dd className={bad ? "mt-1 text-lg font-bold text-rose-300" : "mt-1 text-lg font-bold text-zinc-50"}>{v}</dd>
         </div>
       ))}
     </dl>

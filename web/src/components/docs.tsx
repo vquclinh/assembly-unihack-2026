@@ -40,7 +40,7 @@ export function PhotoGrid({ photos }: { photos: Hex[] }) {
   return (
     <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
       {photos.map((p) => (
-        <a key={p} href={fileUrl(p)} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg bg-stone-100">
+        <a key={p} href={fileUrl(p)} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-sm bg-zinc-900">
           <img src={fileUrl(p)} alt="" className="h-full w-full object-cover" loading="lazy" />
         </a>
       ))}
@@ -51,17 +51,17 @@ export function PhotoGrid({ photos }: { photos: Hex[] }) {
 export function TermsView({ hash }: { hash: Hex }) {
   const t = useT();
   const { doc, verified, missing, loading } = useDoc<Terms>(hash);
-  if (loading) return <p className="text-sm text-stone-500">{t.docs.loadingTerms}</p>;
+  if (loading) return <p className="text-sm text-zinc-400">{t.docs.loadingTerms}</p>;
   if (!doc) return <VerifiedBadge missing={missing} />;
   return (
     <div className="space-y-1 text-sm">
-      {doc.address && <p className="text-stone-600">{doc.address}</p>}
+      {doc.address && <p className="text-zinc-400">{doc.address}</p>}
       {doc.rentVnd > 0 && (
         <p>
-          <b>{t.terms.rent(`${doc.rentVnd.toLocaleString(t.locale)} ₫`)}</b> <span className="text-stone-500">{t.terms.rentNote}</span>
+          <b>{t.terms.rent(`${doc.rentVnd.toLocaleString(t.locale)} ₫`)}</b> <span className="text-zinc-400">{t.terms.rentNote}</span>
         </p>
       )}
-      {doc.notes && <p className="whitespace-pre-wrap text-stone-700">{doc.notes}</p>}
+      {doc.notes && <p className="whitespace-pre-wrap text-zinc-300">{doc.notes}</p>}
       <VerifiedBadge verified={verified} />
     </div>
   );
@@ -80,19 +80,19 @@ export function ReportView({ hash, title }: { hash: Hex; title?: string }) {
         <h3 className="font-bold">{title ?? t.docs.reportTitle}</h3>
         <VerifiedBadge verified={verified} missing={missing} />
       </div>
-      {loading && <p className="text-sm text-stone-500">{t.common.loading}</p>}
+      {loading && <p className="text-sm text-zinc-400">{t.common.loading}</p>}
       {doc && (
         <ul className="space-y-4">
           {doc.items.map((it, i) => (
-            <li key={i} className="border-t border-stone-100 pt-3 first:border-0 first:pt-0">
+            <li key={i} className="border-t border-zinc-800 pt-3 first:border-0 first:pt-0">
               <p className="text-sm font-semibold">{it.label}</p>
-              {it.note && <p className="text-sm text-stone-600">{it.note}</p>}
+              {it.note && <p className="text-sm text-zinc-400">{it.note}</p>}
               <PhotoGrid photos={it.photos} />
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-3 break-all font-mono text-[11px] text-stone-400">hash {hash}</p>
+      <p className="mt-3 break-all font-mono text-[11px] text-zinc-500">hash {hash}</p>
     </div>
   );
 }
@@ -108,7 +108,7 @@ export function EvidenceView({ hash, title }: { hash: Hex; title: string }) {
       </div>
       {doc && (
         <>
-          <p className="whitespace-pre-wrap text-sm text-stone-700">{doc.text || t.docs.noDescription}</p>
+          <p className="whitespace-pre-wrap text-sm text-zinc-300">{doc.text || t.docs.noDescription}</p>
           <PhotoGrid photos={doc.photos} />
         </>
       )}
@@ -125,7 +125,7 @@ export function RulingView({ hash }: { hash: Hex }) {
         <h3 className="font-bold">{t.docs.rulingTitle}</h3>
         <VerifiedBadge verified={verified} missing={missing} />
       </div>
-      {doc && <p className="whitespace-pre-wrap text-sm text-stone-700">{doc.text}</p>}
+      {doc && <p className="whitespace-pre-wrap text-sm text-zinc-300">{doc.text}</p>}
     </div>
   );
 }
@@ -147,13 +147,13 @@ function PhotoPicker({ files, onChange }: { files: File[]; onChange: (f: File[])
             type="button"
             title={t.docs.removePhoto}
             onClick={() => onChange(files.filter((_, j) => j !== i))}
-            className="relative aspect-square overflow-hidden rounded-lg bg-stone-100"
+            className="relative aspect-square overflow-hidden rounded-sm bg-zinc-900"
           >
             <img src={u} alt="" className="h-full w-full object-cover" />
             <span className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-xs text-white">×</span>
           </button>
         ))}
-        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border-2 border-dashed border-stone-300 text-center text-xs text-stone-500 hover:bg-stone-50">
+        <label className="grid aspect-square cursor-pointer place-items-center rounded-sm border-2 border-dashed border-zinc-700 text-center text-xs text-zinc-400 hover:bg-zinc-900">
           {t.docs.addPhoto}
           <input
             type="file"
@@ -207,7 +207,7 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
   return (
     <div className="space-y-4">
       {items.map((it, i) => (
-        <div key={i} className="rounded-xl border border-stone-200 p-3">
+        <div key={i} className="rounded-none border border-zinc-800 p-3">
           <input
             className="w-full bg-transparent text-sm font-semibold focus:outline-none"
             value={it.label}
@@ -224,12 +224,12 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
       ))}
       <button
         type="button"
-        className="text-sm font-semibold text-emerald-700"
+        className="text-sm font-semibold text-brand-400 hover:text-brand-300"
         onClick={() => setItems([...items, { label: t.docs.otherItem, note: "", files: [] }])}
       >
         {t.docs.addItem}
       </button>
-      {err && <p className="text-sm text-rose-700">{err}</p>}
+      {err && <p className="text-sm text-rose-300">{err}</p>}
       <Button className="w-full" loading={uploading || busy} onClick={submit}>
         {uploading ? t.docs.uploading : t.docs.sendReport(total)}
       </Button>
@@ -277,7 +277,7 @@ export function EvidenceForm({
     <div className="space-y-2">
       <textarea className={inputCls} rows={3} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
       <PhotoPicker files={files} onChange={setFiles} />
-      {err && <p className="text-sm text-rose-700">{err}</p>}
+      {err && <p className="text-sm text-rose-300">{err}</p>}
       <Button className="w-full" loading={uploading || busy} onClick={submit}>
         {submitLabel}
       </Button>

@@ -35,10 +35,10 @@ function LeaseRow({ item, role }: { item: Item; role: string }) {
   const t = useT();
   const title = useTermsTitle(item.lease.termsHash);
   return (
-    <Link href={`/l/${item.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 hover:border-emerald-300">
+    <Link href={`/l/${item.id}`} className="flex items-center justify-between gap-3 rounded-none border border-zinc-800 bg-surface p-4 transition hover:border-brand-500/60 hover:shadow-card">
       <div className="min-w-0">
         <p className="truncate font-semibold">{title ?? t.lease.number(item.id.toString())}</p>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-zinc-400">
           #{item.id.toString()} · {role} · {t.me.deposit} {fmtVnd(item.lease.depositAmount, t.locale)}
         </p>
       </div>
@@ -65,12 +65,12 @@ export default function MePage() {
     });
   }, [data, t]);
 
-  if (!w.ready) return <Spinner className="text-stone-400" />;
+  if (!w.ready) return <Spinner className="text-zinc-500" />;
   if (!me)
     return (
       <Card className="mx-auto max-w-md text-center">
         <h1 className="text-xl font-bold">{t.me.noWalletTitle}</h1>
-        <p className="mt-2 text-sm text-stone-600">{t.me.noWalletBody}</p>
+        <p className="mt-2 text-sm text-zinc-400">{t.me.noWalletBody}</p>
       </Card>
     );
 
@@ -79,7 +79,7 @@ export default function MePage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">{t.me.title}</h1>
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-zinc-400">
             {w.active?.label} · <span className="font-mono">{me}</span>
           </p>
         </div>
@@ -88,8 +88,8 @@ export default function MePage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-bold">{t.me.deposits}</h2>
-        {!data && <Spinner className="text-stone-400" />}
-        {data && rows.length === 0 && <p className="text-sm text-stone-600">{t.me.empty}</p>}
+        {!data && <Spinner className="text-zinc-500" />}
+        {data && rows.length === 0 && <p className="text-sm text-zinc-400">{t.me.empty}</p>}
         <div className="space-y-2">
           {rows.map(({ it, role }) => (
             <LeaseRow key={it.id.toString()} item={it} role={role} />

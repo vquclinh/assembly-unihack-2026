@@ -55,20 +55,20 @@ export function WalletMenu() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  if (!w.ready) return <Spinner className="text-stone-400" />;
+  if (!w.ready) return <Spinner className="text-zinc-500" />;
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex min-h-11 items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-50"
+        className="flex min-h-11 items-center gap-2 border border-zinc-700 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-50 transition-colors hover:border-zinc-400 hover:bg-white/5"
         aria-expanded={open}
       >
         {w.active ? (
           <>
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="h-2 w-2 bg-emerald-400" />
             <span className="max-w-[9rem] truncate">{w.active.label}</span>
-            <span className="hidden text-stone-500 sm:inline">{balance !== undefined ? fmtUsdc(balance, loc) : ""}</span>
+            <span className="hidden font-mono text-xs text-zinc-400 sm:inline">{balance !== undefined ? fmtUsdc(balance, loc) : ""}</span>
           </>
         ) : (
           t.wallet.create
@@ -76,13 +76,13 @@ export function WalletMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-stone-200 bg-white p-4 shadow-xl">
+        <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-none border border-zinc-800 bg-surface p-4 shadow-float">
           {w.active && (
-            <div className="mb-4 rounded-xl bg-stone-50 p-3">
-              <p className="text-xs text-stone-500">{t.wallet.active}</p>
+            <div className="mb-4 rounded-none bg-zinc-900 p-3">
+              <p className="text-xs text-zinc-400">{t.wallet.active}</p>
               <p className="font-semibold">{w.active.label}</p>
               <button
-                className="mt-0.5 font-mono text-xs text-stone-600 hover:underline"
+                className="mt-0.5 font-mono text-xs text-zinc-400 hover:underline"
                 onClick={() => {
                   navigator.clipboard?.writeText(w.active!.address);
                   toast({ tone: "info", text: t.wallet.copied });
@@ -91,7 +91,7 @@ export function WalletMenu() {
                 {shortAddr(w.active.address)} · {t.wallet.copy}
               </button>
               {explorerAddress(w.active.address) && (
-                <a className="ml-2 text-xs text-stone-500 underline" href={explorerAddress(w.active.address)} target="_blank" rel="noreferrer">
+                <a className="ml-2 text-xs text-zinc-400 underline" href={explorerAddress(w.active.address)} target="_blank" rel="noreferrer">
                   {t.wallet.explorer}
                 </a>
               )}
@@ -108,7 +108,7 @@ export function WalletMenu() {
 
           {w.accounts.length > 1 && (
             <div className="mb-4">
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">{t.wallet.switch}</p>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">{t.wallet.switch}</p>
               <ul className="space-y-1">
                 {w.accounts.map((a) => (
                   <li key={a.id}>
@@ -118,12 +118,12 @@ export function WalletMenu() {
                         setOpen(false);
                       }}
                       className={cx(
-                        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-stone-100",
-                        a.id === w.active?.id && "bg-emerald-50 font-semibold text-emerald-900",
+                        "flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-zinc-900",
+                        a.id === w.active?.id && "bg-brand-500/10 font-semibold text-brand-200",
                       )}
                     >
                       <span className="truncate">{a.label}</span>
-                      <span className="font-mono text-xs text-stone-500">{shortAddr(a.address)}</span>
+                      <span className="font-mono text-xs text-zinc-400">{shortAddr(a.address)}</span>
                     </button>
                   </li>
                 ))}
@@ -131,7 +131,7 @@ export function WalletMenu() {
             </div>
           )}
 
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500">{t.wallet.add}</p>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">{t.wallet.add}</p>
           <form
             className="flex gap-2"
             onSubmit={(e) => {
@@ -146,7 +146,7 @@ export function WalletMenu() {
               {t.wallet.createButton}
             </Button>
           </form>
-          <p className="mt-1.5 text-xs text-stone-500">{t.wallet.quickHint}</p>
+          <p className="mt-1.5 text-xs text-zinc-400">{t.wallet.quickHint}</p>
           {w.hasInjected && (
             <Button
               variant="secondary"

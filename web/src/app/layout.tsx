@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Rental deposits held in a smart contract on Avalanche, not in anyone's pocket.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#047857" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0a0a0b" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -20,7 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-dvh font-sans antialiased">
         <I18nProvider>

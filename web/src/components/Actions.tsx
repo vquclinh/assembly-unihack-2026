@@ -74,7 +74,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
 
   const needFunds = (amount: bigint) =>
     balance !== undefined && balance < amount ? (
-      <div className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+      <div className="rounded-none bg-amber-500/10 p-3 text-sm text-amber-300">
         {a.needFunds(fmtUsdc(balance, loc), fmtUsdc(amount, loc))}
         {D.mockToken && me && (
           <Button variant="secondary" className="mt-2 w-full" loading={faucet.busy} onClick={() => faucet.claim(me, refreshBalance)}>
@@ -99,7 +99,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
   function settlementForm() {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-stone-700">{a.settleIntro}</p>
+        <p className="text-sm text-zinc-300">{a.settleIntro}</p>
         <Button className="w-full" loading={busy === "full"} onClick={() => run("full", () => call("proposeSettlement", [id, 0n, zeroHash]), a.fullRefunded)}>
           {a.returnFull}
         </Button>
@@ -108,7 +108,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
             {a.proposeDeduction}
           </Button>
         ) : (
-          <div className="space-y-2 rounded-xl border border-stone-200 p-3">
+          <div className="space-y-2 rounded-none border border-zinc-800 p-3">
             <label className="block text-sm font-medium">{a.deductAmount}</label>
             <input
               className={inputCls}
@@ -144,7 +144,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         if (role === "landlord")
           return (
             <>
-              <p className="text-sm text-stone-600">{a.offerWaiting}</p>
+              <p className="text-sm text-zinc-400">{a.offerWaiting}</p>
               <Countdown until={moveIn} now={now} before={a.linkExpiresIn} after={a.linkExpired} />
               <Button variant="danger" className="w-full" loading={busy === "cancel"} onClick={() => run("cancel", () => call("cancelOffer", [id]), a.linkCancelled)}>
                 {a.cancelLink}
@@ -154,7 +154,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         if (role === "candidate" || role === "tenant")
           return (
             <>
-              <p className="text-sm text-stone-700">{a.reserveBody(<Money x={L.holdAmount} />, fmtDate(L.moveInDeadline, loc))}</p>
+              <p className="text-sm text-zinc-300">{a.reserveBody(<Money x={L.holdAmount} />, fmtDate(L.moveInDeadline, loc))}</p>
               {needFunds(L.holdAmount)}
               <Button
                 className="w-full text-base"
@@ -166,8 +166,8 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
               </Button>
             </>
           );
-        if (role === "mediator") return <p className="text-sm text-stone-600">{a.mediatorOffer}</p>;
-        return <p className="text-sm text-stone-600">{me ? a.lockedOther : a.noWalletReserve}</p>;
+        if (role === "mediator") return <p className="text-sm text-zinc-400">{a.mediatorOffer}</p>;
+        return <p className="text-sm text-zinc-400">{me ? a.lockedOther : a.noWalletReserve}</p>;
       }
 
       case Status.Reserved: {
@@ -178,14 +178,14 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
             <>
               {L.conditionHash !== zeroHash && mode !== "report" ? (
                 <>
-                  <p className="text-sm text-stone-700">{a.reportSent}</p>
+                  <p className="text-sm text-zinc-300">{a.reportSent}</p>
                   <Button variant="secondary" className="w-full" onClick={() => setMode("report")}>
                     {a.redoReport}
                   </Button>
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-stone-700">{a.reportIntro}</p>
+                  <p className="text-sm text-zinc-300">{a.reportIntro}</p>
                   <ReportBuilder
                     leaseId={id.toString()}
                     busy={busy === "condition"}
@@ -208,13 +208,13 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
           return (
             <>
               {L.conditionHash === zeroHash ? (
-                <p className="text-sm text-stone-700">{a.waitReport}</p>
+                <p className="text-sm text-zinc-300">{a.waitReport}</p>
               ) : (
                 <>
-                  <p className="text-sm text-stone-700">{a.checkReport(<Money x={topUp} />)}</p>
+                  <p className="text-sm text-zinc-300">{a.checkReport(<Money x={topUp} />)}</p>
                   {L.landlordYieldOptIn && (
-                    <label className="flex items-start gap-3 rounded-xl bg-stone-50 p-3 text-sm">
-                      <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={acceptYield} onChange={(e) => setAcceptYield(e.target.checked)} />
+                    <label className="flex items-start gap-3 rounded-none bg-zinc-900 p-3 text-sm">
+                      <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-600" checked={acceptYield} onChange={(e) => setAcceptYield(e.target.checked)} />
                       <span>{a.acceptYield}</span>
                     </label>
                   )}
@@ -257,7 +257,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         }
         return (
           <>
-            <p className="text-sm text-stone-600">{a.waitingMoveIn}</p>
+            <p className="text-sm text-zinc-400">{a.waitingMoveIn}</p>
             {canFinalize && me && finalizeBtn(a.finalizeRefundHold, a.holdRefunded)}
           </>
         );
@@ -267,7 +267,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         const by = actionAt + rw;
         return (
           <>
-            <p className="text-sm text-stone-700">{a.noShowBody}</p>
+            <p className="text-sm text-zinc-300">{a.noShowBody}</p>
             <Countdown until={by} now={now} before={a.tenantHas} after={a.objectionClosed} />
             {role === "tenant" && now <= by && (
               <EvidenceForm
@@ -289,21 +289,21 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         if (role === "tenant")
           return (
             <>
-              <p className="text-sm text-stone-700">{a.activeTenant(Math.round(rw / 60))}</p>
+              <p className="text-sm text-zinc-300">{a.activeTenant(Math.round(rw / 60))}</p>
               <Button className="w-full" loading={busy === "release"} onClick={() => run("release", () => call("requestRelease", [id]), a.releaseRequested)}>
                 {a.requestRelease}
               </Button>
             </>
           );
         if (role === "landlord") return settlementForm();
-        return <p className="text-sm text-stone-600">{a.activeOther}</p>;
+        return <p className="text-sm text-zinc-400">{a.activeOther}</p>;
       }
 
       case Status.ReleaseRequested: {
         const by = actionAt + rw;
         return (
           <>
-            <p className="text-sm text-stone-700">{a.releaseBody}</p>
+            <p className="text-sm text-zinc-300">{a.releaseBody}</p>
             <Countdown until={by} now={now} before={a.landlordHas} after={a.landlordLate} />
             {role === "landlord" && now <= by && settlementForm()}
             {now > by && me && finalizeBtn(a.finalizeFullRefund, a.fullRefunded)}
@@ -316,7 +316,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         const rest = L.balance > L.proposedDeduction ? L.balance - L.proposedDeduction : 0n;
         return (
           <>
-            <p className="text-sm text-stone-700">{a.proposedBody(<Money x={L.proposedDeduction} />)}</p>
+            <p className="text-sm text-zinc-300">{a.proposedBody(<Money x={L.proposedDeduction} />)}</p>
             <Countdown until={by} now={now} before={a.tenantHas} after={a.replyClosed} />
             {role === "tenant" && now <= by && (
               <>
@@ -349,10 +349,10 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         const toTenant = (L.balance * BigInt(toTenantPct)) / 100n;
         return (
           <>
-            <p className="text-sm text-stone-700">{a.disputedBody(<Money x={L.balance} />)}</p>
+            <p className="text-sm text-zinc-300">{a.disputedBody(<Money x={L.balance} />)}</p>
             <Countdown until={by} now={now} before={a.mediatorHas} after={a.mediatorLate} />
             {role === "mediator" && (
-              <div className="space-y-3 rounded-xl border border-stone-200 p-3">
+              <div className="space-y-3 rounded-none border border-zinc-800 p-3">
                 <p className="text-sm font-semibold">{a.ruling}</p>
                 <input
                   type="range"
@@ -361,7 +361,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
                   step={5}
                   value={toTenantPct}
                   onChange={(e) => setToTenantPct(Number(e.target.value))}
-                  className="w-full accent-emerald-700"
+                  className="w-full accent-brand-600"
                 />
                 <div className="flex justify-between text-sm">
                   <span>
@@ -380,7 +380,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
                 >
                   {a.rule}
                 </Button>
-                <p className="text-xs text-stone-500">{a.mediatorNote}</p>
+                <p className="text-xs text-zinc-400">{a.mediatorNote}</p>
               </div>
             )}
             {now > by && me && finalizeBtn(a.finalizeSplit, a.split)}
@@ -389,23 +389,23 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
       }
 
       case Status.Closed:
-        return <p className="text-sm text-stone-700">{a.closedBody}</p>;
+        return <p className="text-sm text-zinc-300">{a.closedBody}</p>;
       case Status.Cancelled:
-        return <p className="text-sm text-stone-700">{a.cancelledBody}</p>;
+        return <p className="text-sm text-zinc-300">{a.cancelledBody}</p>;
       default:
-        return <p className="text-sm text-stone-600">{a.unknown}</p>;
+        return <p className="text-sm text-zinc-400">{a.unknown}</p>;
     }
   })();
 
   return (
-    <Card className="space-y-3 border-emerald-200 ring-1 ring-emerald-100">
+    <Card className="space-y-3 border-brand-500/40 ring-4 ring-brand-500/10">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-bold">{a.todo}</h2>
-        <span className="text-right text-xs font-medium text-stone-500">{t.roles[role]}</span>
+        <span className="text-right text-xs font-medium text-zinc-400">{t.roles[role]}</span>
       </div>
       {body}
       {role === "tenant" && L.status === Status.Reserved && L.conditionHash !== zeroHash && (
-        <div className="border-t border-stone-100 pt-4">
+        <div className="border-t border-zinc-800 pt-4">
           <ReportView hash={L.conditionHash} />
         </div>
       )}

@@ -25,10 +25,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={item.id}
             role="status"
             className={cx(
-              "pointer-events-auto w-full max-w-md rounded-xl px-4 py-3 text-sm shadow-lg",
-              item.tone === "good" && "bg-emerald-800 text-white",
-              item.tone === "bad" && "bg-rose-700 text-white",
-              item.tone === "info" && "bg-stone-900 text-white",
+              "pointer-events-auto w-full max-w-md border-l-4 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-900 shadow-float",
+              item.tone === "good" && "border-emerald-500",
+              item.tone === "bad" && "border-brand-500",
+              item.tone === "info" && "border-zinc-900",
             )}
           >
             <p>{item.text}</p>
