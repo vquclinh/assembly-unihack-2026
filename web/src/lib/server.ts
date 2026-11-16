@@ -5,7 +5,7 @@ import { type Hex, createPublicClient, createWalletClient, decodeErrorResult, ht
 import { privateKeyToAccount } from "viem/accounts";
 import { allErrorsAbi, chain } from "./config";
 
-export const serverPublic = createPublicClient({ chain, transport: http(undefined, { batch: true }) });
+export const serverPublic = createPublicClient({ chain, transport: http(process.env.RPC_URL || undefined, { batch: true, retryCount: 4 }) });
 
 /** Falls back to the deployer key in contracts/.env so local setup needs one key file only. */
 function keyFromContractsEnv() {
@@ -21,7 +21,7 @@ export function relayerWallet() {
   const pk = process.env.RELAYER_PRIVATE_KEY?.trim() || keyFromContractsEnv();
   if (!pk) return null;
   const account = privateKeyToAccount((pk.startsWith("0x") ? pk : `0x${pk}`) as Hex);
-  return createWalletClient({ account, chain, transport: http() });
+  return createWalletClient({ account, chain, transport: http(process.env.RPC_URL || undefined, { retryCount: 4 }) });
 }
 
 /** Digs the revert data out of a viem error and decodes it against all our ABIs. */

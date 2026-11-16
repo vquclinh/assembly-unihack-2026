@@ -116,8 +116,8 @@ export default function DemoPage() {
       mediatorAddr,
       vndToUsdc(terms.holdVnd),
       vndToUsdc(terms.depositVnd),
-      BigInt(now + 10 * 60),
-      BigInt(now + 30 * 60),
+      BigInt(now + 20 * 60),
+      BigInt(now + 45 * 60),
       true,
       termsHash,
     ]);
