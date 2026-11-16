@@ -104,6 +104,10 @@ export type Terms = {
   depositVnd: number;
   holdVnd: number;
   notes: string;
+  /** Optional: listed on the public "Find a room" page. */
+  listed?: boolean;
+  /** Optional room photos, by content hash. */
+  photos?: Hex[];
   createdAt: string;
 };
 
@@ -133,5 +137,40 @@ export type Ruling = {
   leaseId: string;
   text: string;
   toTenant: string;
+  createdAt: string;
+};
+
+/**
+ * The first second at which anyone may call `finalize` on this lease, or null if the
+ * current status has no deadline. Mirrors the TooEarly checks in CocEscrow.finalize.
+ */
+export function finalizeDueAt(L: Pick<Lease, "status" | "moveInDeadline" | "actionAt">, responseWindow: number, mediationTimeout: number) {
+  switch (L.status) {
+    case Status.Reserved:
+      return Number(L.moveInDeadline) + responseWindow + 1;
+    case Status.NoShowClaimed:
+    case Status.ReleaseRequested:
+    case Status.SettlementProposed:
+      return Number(L.actionAt) + responseWindow + 1;
+    case Status.Disputed:
+      return Number(L.actionAt) + mediationTimeout + 1;
+    default:
+      return null;
+  }
+}
+
+/** Off-chain AI damage assessment, paid per report over x402. */
+export type AiReport = {
+  kind: "ai-report";
+  v: 1;
+  leaseId: string;
+  model: string;
+  inputs: { condition: Hex; landlordEvidence: Hex; tenantEvidence: Hex };
+  summary: string;
+  findings: { area: string; observation: string; preExisting: "yes" | "no" | "unclear"; severity: "none" | "minor" | "moderate" | "major" }[];
+  suggestedDeductionPct: number;
+  confidence: "low" | "medium" | "high";
+  caveats: string;
+  payment: { payer: Address; amount: string; tx: Hex };
   createdAt: string;
 };

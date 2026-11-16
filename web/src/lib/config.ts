@@ -11,6 +11,8 @@ export type Deployment = {
   vault: string;
   forwarder: string;
   escrow: string;
+  badge?: string;
+  badgeMinCompleted?: number;
   responseWindow: number;
   mediationTimeout: number;
   rpcUrl: string;
@@ -25,13 +27,16 @@ export const ESCROW = D.escrow as Address;
 export const TOKEN = D.token as Address;
 export const FORWARDER = D.forwarder as Address;
 export const VAULT = D.vault as Address;
+export const BADGE = (D.badge ?? "") as Address;
+export const hasBadge = /^0x[0-9a-fA-F]{40}$/.test(BADGE);
 
 export const escrowAbi = abis.CocEscrow as Abi;
 export const forwarderAbi = abis.CocForwarder as Abi;
 export const tokenAbi = abis.MockUSDC as Abi;
+export const badgeAbi = abis.CocBadge as Abi;
 
 /** Every error any of our contracts can throw, for decoding reverts. */
-export const allErrorsAbi = [...escrowAbi, ...forwarderAbi, ...tokenAbi].filter(
+export const allErrorsAbi = [...escrowAbi, ...forwarderAbi, ...tokenAbi, ...badgeAbi].filter(
   (x) => (x as { type: string }).type === "error",
 ) as Abi;
 

@@ -150,6 +150,17 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 - It does **not** store photos or personal details on the blockchain. Only cryptographic fingerprints (hashes) are on-chain.
 - It does **not** let the platform, the mediator or the development team take or redirect anyone's money.
 
+### 6.5 Around the deposit
+
+| Feature | What it does for users |
+|---|---|
+| **Find a room** | Public listings are open deposit links, so a holding deposit can only go into the contract. Each card shows the landlord's on-chain record and badge. |
+| **Trusted landlord badge** | A soulbound token (ERC-5192) a landlord claims once the contract has recorded clean leases. Anyone can revoke it when the record stops qualifying, and other apps can check it with `isTrusted(address)`. |
+| **Scam reports** | Signed community warnings, one per wallet per landlord, shown apart from the on-chain facts. |
+| **AI damage report** | A vision model compares move-in photos with move-out evidence and suggests a split. The mediator pays per report over x402. The contract never accepts the AI's answer, only the mediator's ruling. |
+| **Agreement and reminders** | A printable A4 agreement in English and Vietnamese with the on-chain fingerprint and a QR code, and calendar reminders before every deadline. |
+| **Live statistics** | Money locked now, total secured, amicable rate and rulings, read directly from the contract. |
+
 ---
 
 ## 7. How it works (technical design)
@@ -161,14 +172,18 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
               │  signs actions with a quick in-browser key or Core/MetaMask
               ▼
   Coc web app (Next.js)
-   ├─ /api/relay   pays gas and forwards signed requests (ERC-2771)
-   ├─ /api/files   stores photos and reports under their keccak256 hash
-   └─ /api/faucet  test USDC for the demo
+   ├─ /api/relay      pays gas and forwards signed requests (ERC-2771)
+   ├─ /api/files      stores photos and reports under their keccak256 hash
+   ├─ /api/ai-report  AI damage report behind an x402 paywall (HTTP 402)
+   ├─ /api/keeper     calls finalize once a deadline has passed
+   ├─ /api/rooms, /api/stats, /api/reports   listings, live numbers, signed reports
+   └─ /api/faucet     test USDC for the demo
               │
               ▼
   Avalanche C-Chain (Fuji testnet)
    ├─ CocEscrow       deposit state machine, deadlines, reputation
    ├─ CocForwarder    verifies user signatures for gasless calls
+   ├─ CocBadge        soulbound "Trusted landlord" credential (ERC-5192)
    ├─ USDC (EIP-3009) deposits moved by signed authorisation
    └─ ERC-4626 vault  optional yield on idle deposits
 ```
@@ -185,6 +200,8 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 - **Tamper-evident evidence.** Photos and reports are stored off-chain under their keccak256 hash, which is the same value recorded on-chain. The app re-hashes every document it displays and shows whether it still matches.
 - **Sybil-resistant reputation.** Only leases that reached move-in count, and each is weighted by deposit size multiplied by time held ("USDC-days"). Faking a good record means locking real money for a long time.
 - **Optional yield.** If both sides opt in, the deposit sits in an ERC-4626 vault and yield is split 50/50. If the vault loses value, payouts are computed on what remains and the lease still closes. The MVP uses a simulated vault.
+- **Machine payments with x402.** The AI report endpoint answers HTTP 402 with payment requirements. The mediator signs an EIP-3009 authorisation for 0.10 USDC to the server, which verifies it, runs the model, then settles the payment on Avalanche and returns the receipt in the `X-PAYMENT-RESPONSE` header. No account, subscription or API key is needed on the buyer's side.
+- **Deadlines that enforce themselves.** A keeper calls `finalize` as soon as a deadline passes: the lease page triggers it, a daily cron sweeps all leases, and anyone else may call it too.
 - **Token-agnostic.** The contract works with any EIP-3009 token, so it can switch to whatever regulated asset Vietnamese law permits.
 
 ### 7.4 Why blockchain, and why Avalanche
@@ -250,9 +267,11 @@ The MVP is complete and deployed on the Avalanche Fuji testnet:
 
 Delivered so far:
 
-- Escrow contract with all flows above and 29 passing tests.
+- Escrow and badge contracts with all flows above and 34 passing tests.
 - Gasless relayer, in-browser quick wallets and Core/MetaMask support.
 - Web app with deposit links and QR codes, photo condition reports, deduction and dispute flows, mediator ruling, on-chain receipts and public reputation pages.
+- A one-click judge demo with landlord, tenant and mediator side by side.
+- AI damage reports paid over x402, the trusted landlord badge, a room finder with signed scam reports, live statistics, an automatic keeper, and a printable bilingual agreement with calendar reminders.
 - English and Vietnamese interface.
 
 ## 12. Roadmap
@@ -260,7 +279,7 @@ Delivered so far:
 | Phase | Scope |
 |---|---|
 | Hackathon (Nov 2026) | Public demo deployment, verified contracts, demo video and pitch |
-| Next | AI comparison of move-in and move-out photos as a neutral damage report for the mediator, paid per report over x402 |
+| Next | Zalo and Telegram reminders, landlord identity checks with a university partner, AI reports in Vietnamese legal language |
 | Pilot | One university, its student affairs office as mediator, a few dozen landlords |
 | Production | Security audit, regulated settlement asset, optional Avalanche L1 for a university network |
 

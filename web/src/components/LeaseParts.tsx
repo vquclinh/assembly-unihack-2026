@@ -1,13 +1,17 @@
 "use client";
 
+import { TrustChip } from "./TrustBadge";
 import { QRCodeSVG } from "qrcode.react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type Address, zeroAddress } from "viem";
+import { type CalendarEvent, buildIcs, downloadIcs } from "@/lib/calendar";
 import { publicClient } from "@/lib/client";
 import { D, ESCROW, escrowAbi, explorerTx } from "@/lib/config";
 import { fmtDuration, fmtUsdc, fmtVnd, shortAddr } from "@/lib/format";
 import { useT } from "@/lib/i18n";
-import { Status, stepIndex, type Lease } from "@/lib/lease";
+import { Status, finalizeDueAt, stepIndex, type Lease } from "@/lib/lease";
+import { Icon } from "./icons";
 import { ReputationBadge } from "./Reputation";
 import { Card, Row, cx } from "./ui";
 import { useToast } from "./toast";
@@ -113,7 +117,8 @@ function Party({ label, address, role, me }: { label: string; address: Address; 
         )}
       </div>
       {address !== zeroAddress && role && (
-        <div className="mt-1 text-right">
+        <div className="mt-1 flex flex-wrap items-center justify-end gap-1.5">
+          {role === "landlord" && <TrustChip address={address} />}
           <ReputationBadge address={address} role={role} />
         </div>
       )}
@@ -214,6 +219,66 @@ export function Receipt({ id, L, status }: { id: bigint; L: Lease; status: numbe
         ))}
       </ul>
       <p className="mt-2 text-xs text-zinc-400">{t.receipt.note(D.network)}</p>
+    </Card>
+  );
+}
+
+/** Upcoming deadlines of a lease, as calendar events. */
+export function leaseEvents(id: string, L: Lease, now: number, t: ReturnType<typeof useT>): CalendarEvent[] {
+  const ev: CalendarEvent[] = [];
+  const due = finalizeDueAt(L, D.responseWindow, D.mediationTimeout);
+  if (L.status === Status.Offered || L.status === Status.Reserved) {
+    ev.push({ uid: `${D.chainId}-${id}-movein`, at: Number(L.moveInDeadline), title: t.tools.evMoveIn(id), description: t.tools.evMoveInDesc });
+  }
+  if (L.status === Status.Reserved && due) {
+    ev.push({ uid: `${D.chainId}-${id}-grace`, at: due, title: t.tools.evGrace(id), description: t.tools.evGraceDesc });
+  } else if (due) {
+    ev.push({ uid: `${D.chainId}-${id}-due-${L.actionAt}`, at: due, title: t.tools.evDue(id), description: t.tools.evDueDesc(t.status[L.status]) });
+  }
+  if (L.status !== Status.Closed && L.status !== Status.Cancelled && L.status < Status.ReleaseRequested) {
+    ev.push({ uid: `${D.chainId}-${id}-end`, at: Number(L.leaseEnd), title: t.tools.evLeaseEnd(id), description: t.tools.evLeaseEndDesc });
+  }
+  return ev.filter((e) => e.at > now).sort((a, b) => a.at - b.at);
+}
+
+/** Printable bilingual agreement and calendar reminders for the deadlines. */
+export function LeaseToolsCard({ id, L, now }: { id: string; L: Lease; now: number }) {
+  const t = useT();
+  const events = leaseEvents(id, L, now, t);
+  return (
+    <Card>
+      <h2 className="mb-3 font-bold">{t.tools.title}</h2>
+      <div className="space-y-3">
+        <Link href={`/l/${id}/agreement`} className="group flex gap-3 border border-zinc-800 p-3 transition-colors hover:border-brand-500">
+          <Icon name="fileText" className="mt-0.5 h-5 w-5 shrink-0 text-brand-500" />
+          <span>
+            <span className="block text-sm font-semibold text-white">{t.tools.agreement}</span>
+            <span className="block text-xs text-zinc-400">{t.tools.agreementHint}</span>
+          </span>
+        </Link>
+        {events.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => downloadIcs(`coc-${id}.ics`, buildIcs(events, `${window.location.origin}/l/${id}`))}
+            className="flex w-full gap-3 border border-zinc-800 p-3 text-left transition-colors hover:border-brand-500"
+          >
+            <Icon name="calendar" className="mt-0.5 h-5 w-5 shrink-0 text-brand-500" />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-white">{t.tools.calendar}</span>
+              <span className="block text-xs text-zinc-400">{t.tools.calendarHint}</span>
+              <span className="mt-1.5 block space-y-0.5 font-mono text-[11px] text-zinc-500">
+                {events.map((e) => (
+                  <span key={e.uid} className="block truncate">
+                    {new Date(e.at * 1000).toLocaleString(t.locale, { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {e.title.replace(/^C[oọ]c #\d+: /, "")}
+                  </span>
+                ))}
+              </span>
+            </span>
+          </button>
+        ) : (
+          <p className="text-xs text-zinc-500">{t.tools.noDeadlines}</p>
+        )}
+      </div>
     </Card>
   );
 }

@@ -43,6 +43,19 @@ Every waiting state has a deadline. After it passes, anyone can call `finalize`,
 - **Tamper-evident evidence.** Photos and reports are stored off-chain under their keccak256 hash; only the hash goes on-chain, and the app shows whether a document still matches it.
 - **Bilingual UI.** English by default, Vietnamese with one tap.
 
+### Built for the demo, useful after it
+
+| Feature | Where | What it shows |
+|---|---|---|
+| **Judge demo** | `/demo` | One click creates three wallets, funds them and opens a real deposit on-chain. Landlord, tenant and mediator then act side by side in three live panels, with narration and a red frame on whoever moves next. |
+| **AI damage report, paid over x402** | lease page, after a deduction | A vision model (Qwen VL through OpenRouter) compares the move-in photos with the move-out evidence and suggests a split. The mediator pays 0.10 test USDC per report with the HTTP 402 "exact" scheme: an EIP-3009 authorization that the server verifies, then settles on Avalanche. Advice only: the contract accepts nothing but the mediator's ruling. |
+| **Trusted landlord badge** | `/u/[address]`, `/me` | `CocBadge` is a soulbound ERC-5192 token with fully on-chain SVG metadata. A landlord claims it gasless once the escrow has recorded clean leases. Anyone can revoke it the moment the record stops qualifying, and any contract can call `isTrusted(address)`. |
+| **Find a room** | `/rooms` | Public listings are open Coc deposit links, so the holding deposit can only go into the contract. Search, "trusted landlords only", sort by record, and the landlord's on-chain verdict on every card. |
+| **Scam reports** | room cards, lease page, profile | Community warnings signed with EIP-712 (one per wallet per landlord), shown apart from the on-chain facts. |
+| **Live stats** | `/stats` | Money locked now, total secured, amicable rate, refunds, rulings, read straight from the contract. |
+| **Keeper** | automatic | When a deadline passes, the lease page asks the server to call `finalize`; a Vercel cron sweeps daily and `npm run keeper` runs a loop. Nobody has to press a button for the promised outcome. |
+| **Bilingual agreement and reminders** | `/l/[id]/agreement` | A printable A4 agreement in English and Vietnamese, built only from on-chain data, with the terms fingerprint and a QR code. Deadlines download as a `.ics` file with reminders a day and an hour before. |
+
 ## Deployment (Avalanche Fuji)
 
 | Contract | Address |
@@ -51,6 +64,7 @@ Every waiting state has a deadline. After it passes, anyone can call `finalize`,
 | CocForwarder | [`0xa147258E8C60fb29599F088aCCc74B97981865a8`](https://testnet.snowtrace.io/address/0xa147258E8C60fb29599F088aCCc74B97981865a8) |
 | MockUSDC (test token) | [`0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87`](https://testnet.snowtrace.io/address/0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87) |
 | DemoYieldVault | [`0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6`](https://testnet.snowtrace.io/address/0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6) |
+| CocBadge | run `npm run deploy-badge:fuji` in `contracts/`; the address is added to `web/src/lib/deployment.json` |
 
 Demo deadlines: 5 minutes to respond, 10 minutes to mediate.
 
@@ -60,15 +74,24 @@ Demo deadlines: 5 minutes to respond, 10 minutes to mediate.
 contracts/            Hardhat project
   contracts/CocEscrow.sol        Main escrow contract
   contracts/CocForwarder.sol     ERC-2771 forwarder for gasless calls
+  contracts/CocBadge.sol         Soulbound "Trusted landlord" badge (ERC-5192)
   contracts/mocks/               Test USDC (with EIP-3009) and a simulated yield vault
-  test/CocEscrow.test.js         29 tests
+  test/                          34 tests (escrow and badge)
   scripts/deploy.js              Deploys and points the web app at the new addresses
+  scripts/deploy-badge.js        Adds the badge to an existing deployment
 web/                  Next.js app (UI + relayer + evidence store)
-  src/app/                       Pages: /, /create, /l/[id], /me, /u/[address]
+  src/app/                       Pages: /, /create, /l/[id], /l/[id]/agreement, /me, /u/[address],
+                                 /rooms, /stats, /demo
   src/app/api/relay              Relayer: the user signs, the server pays gas
   src/app/api/faucet             Hands out test USDC
   src/app/api/files              Content-addressed photo and report store
+  src/app/api/ai-report/[id]     AI damage report behind an x402 paywall
+  src/app/api/keeper             Calls finalize on leases whose deadline passed
+  src/app/api/rooms, stats, reports   Room listings, live numbers, signed scam reports
+  src/lib/x402.ts                x402 "exact" scheme: requirements, verify, settle
+  src/lib/store.ts               Vercel Blob in production, a local folder otherwise
   src/lib/i18n.tsx               English and Vietnamese UI text
+  scripts/keeper-loop.mjs        npm run keeper: settles due leases every 20 seconds
   src/lib/deployment.json        Contract addresses (written by the deploy script)
 docs/
   PROPOSAL.md         Full project proposal (also as PROPOSAL.pdf)
@@ -95,7 +118,20 @@ npm run dev
 
 Open http://localhost:3000. The relayer reuses `PRIVATE_KEY` from `contracts/.env` to pay gas for users, so no extra setup is needed. To use a different wallet, copy `web/.env.example` to `web/.env.local` and set `RELAYER_PRIVATE_KEY`.
 
-### Demo script on one machine
+Optional settings in `web/.env.local` (all described in `web/.env.example`):
+
+| Variable | Turns on |
+|---|---|
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | AI damage reports. The default `qwen/qwen-2.5-vl-7b-instruct` costs a fraction of a cent per report. |
+| `AI_REPORT_PRICE_USDC` | Price of one AI report over x402 (default 0.10 test USDC). |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage, so photos and records survive redeploys. |
+| `CRON_SECRET` | Protects the daily keeper sweep on Vercel. |
+
+### Fastest demo: the judge demo page
+
+Open http://localhost:3000/demo and press **Start the demo**. It creates the three wallets, funds them and opens a deposit. Then follow the red frame: reserve, report, move in, move out, propose a deduction, dispute, buy the AI report, rule. Deadlines are short on purpose, so a silent party is settled automatically within minutes.
+
+### Demo script by hand
 
 1. Press **Create wallet** at the top and create three quick wallets: "Landlord", "Tenant", "Mediator".
 2. Pick Landlord, open **Create deposit link**, choose the Mediator wallet as mediator, and create the link.
@@ -104,7 +140,8 @@ Open http://localhost:3000. The relayer reuses `PRIVATE_KEY` from `contracts/.en
 5. Switch to Tenant, check the photos (marked "Matches on-chain fingerprint") and **Confirm move-in**.
 6. Tenant presses **I moved out, return my deposit**. Landlord **Proposes a deduction** with a photo.
 7. Tenant presses **I disagree**: the undisputed part arrives at once.
-8. Switch to Mediator, drag the split slider, write a reason and **Finalize ruling**. See the **On-chain receipt**.
+8. Switch to Mediator, press **Buy AI report** (paid over x402), then drag the split slider, write a reason and **Finalize ruling**. See the **On-chain receipt**.
+9. Open the landlord's profile and claim the **Trusted landlord** badge (only if the landlord did not lose the dispute: at most one lost dispute in five leases).
 
 ### Fully offline (no Fuji)
 
@@ -132,8 +169,23 @@ node -e "const fs=require('fs');const w=require('ethers').Wallet.createRandom();
 
 Get testnet AVAX from the organisers' faucet (https://team1vn.xyz/faucet.html) or https://core.app/tools/testnet-faucet (coupon `avalanche-academy`). Addresses are written to `contracts/deployments/fuji.json` and `web/src/lib/deployment.json`, and the script prints the Snowtrace verify commands.
 
-Leave `USDC_ADDRESS` empty to deploy a test USDC with a public faucet, or set it to Circle's Fuji test USDC: `0x5425890298aed601595a70AB815c96711a31Bc65`.
+Leave `USDC_ADDRESS` empty to deploy a test USDC with a public faucet, or set it to Circle's Fuji test USDC: `0x5425890298aed601595a70AB815c96711a31Bc65`. The AI report payment needs a token with EIP-3009 `receiveWithAuthorization`, which both of these have.
+
+Then add the badge contract to the same deployment:
+
+```bash
+npm run deploy-badge:fuji
+```
+
+## Host on Vercel
+
+1. Import the repository on Vercel and set the **Root Directory** to `web`.
+2. Add the environment variables: `RELAYER_PRIVATE_KEY` (required, a testnet wallet with a little AVAX), and optionally `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `CRON_SECRET`.
+3. Under **Storage**, create a **Blob** store and connect it to the project. This adds `BLOB_READ_WRITE_TOKEN`.
+4. Deploy. `web/vercel.json` registers the keeper cron (daily on the Hobby plan; the lease page also triggers it as soon as a deadline passes).
 
 ## Disclaimer
 
 This is a testnet prototype built for a hackathon. It has not been audited and is not legal advice. The contract is token-agnostic. Coc only holds the security deposit and never handles rent.
+
+Privacy notes: photos of a room listed on **Find a room** are public, and AI damage reports send the lease's photos to the configured OpenRouter model. Evidence for unlisted leases is only reachable by its hash.

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { type Address, type Hex, createWalletClient, custom, numberToHex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { chain } from "./config";
@@ -29,7 +29,11 @@ type WalletCtx = {
   rename: (id: string, label: string) => void;
   remove: (id: string) => void;
   signTypedData: (p: SignTypedDataParams) => Promise<Hex>;
+  /** Signs with a specific quick wallet, whichever one is active (used by the judge demo). */
+  signTypedDataAs: (id: string, p: SignTypedDataParams) => Promise<Hex>;
   hasInjected: boolean;
+  /** True when this page was opened with ?as=<walletId>, e.g. one column of the judge demo. */
+  pinned: boolean;
 };
 
 const Ctx = createContext<WalletCtx | null>(null);
@@ -82,40 +86,53 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [hasInjected, setHasInjected] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const listRef = useRef<StoredAccount[]>([]);
+  const pinnedRef = useRef(false);
 
   useEffect(() => {
     const l = load();
+    listRef.current = l;
     setList(l);
     let a: string | null = null;
     try {
       a = localStorage.getItem(ACTIVE_KEY);
     } catch {}
+    // ?as=<walletId> pins this tab or frame to one wallet without changing the others.
+    const as = new URLSearchParams(window.location.search).get("as");
+    if (as && l.some((x) => x.id === as)) {
+      a = as;
+      pinnedRef.current = true;
+      setPinned(true);
+    }
     setActiveId(l.find((x) => x.id === a)?.id ?? l[0]?.id ?? null);
     setHasInjected(!!injected());
     setReady(true);
   }, []);
 
   const persist = useCallback((next: StoredAccount[], nextActive: string | null) => {
+    listRef.current = next;
     setList(next);
     setActiveId(nextActive);
     save(next);
+    if (pinnedRef.current) return;
     try {
       if (nextActive) localStorage.setItem(ACTIVE_KEY, nextActive);
       else localStorage.removeItem(ACTIVE_KEY);
     } catch {}
   }, []);
 
-  const select = useCallback((id: string) => persist(list, id), [list, persist]);
+  const select = useCallback((id: string) => persist(listRef.current, id), [persist]);
 
   const createQuick = useCallback(
     (label: string) => {
       const pk = generatePrivateKey();
       const address = privateKeyToAccount(pk).address;
       const acc: StoredAccount = { id: crypto.randomUUID(), label: label || "Quick wallet", kind: "quick", pk, address };
-      persist([...list, acc], acc.id);
+      persist([...listRef.current, acc], acc.id);
       return { id: acc.id, label: acc.label, kind: acc.kind, address };
     },
-    [list, persist],
+    [persist],
   );
 
   const connectInjected = useCallback(async (label: string) => {
@@ -164,6 +181,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     [activeStored],
   );
 
+  const signTypedDataAs = useCallback(async (id: string, p: SignTypedDataParams): Promise<Hex> => {
+    const acc = listRef.current.find((x) => x.id === id);
+    if (!acc || acc.kind !== "quick") throw new AppError("NoWallet");
+    const account = privateKeyToAccount(acc.pk);
+    return account.signTypedData(p as Parameters<typeof account.signTypedData>[0]);
+  }, []);
+
   const value = useMemo<WalletCtx>(() => {
     const strip = (x: StoredAccount): WalletAccount => ({ id: x.id, label: x.label, kind: x.kind, address: x.address });
     return {
@@ -176,9 +200,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       rename,
       remove,
       signTypedData,
+      signTypedDataAs,
       hasInjected,
+      pinned,
     };
-  }, [ready, list, activeStored, select, createQuick, connectInjected, rename, remove, signTypedData, hasInjected]);
+  }, [ready, list, activeStored, select, createQuick, connectInjected, rename, remove, signTypedData, signTypedDataAs, hasInjected, pinned]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -5,7 +5,7 @@ import { type Hex, createPublicClient, createWalletClient, decodeErrorResult, ht
 import { privateKeyToAccount } from "viem/accounts";
 import { allErrorsAbi, chain } from "./config";
 
-export const serverPublic = createPublicClient({ chain, transport: http() });
+export const serverPublic = createPublicClient({ chain, transport: http(undefined, { batch: true }) });
 
 /** Falls back to the deployer key in contracts/.env so local setup needs one key file only. */
 function keyFromContractsEnv() {

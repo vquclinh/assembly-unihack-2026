@@ -56,6 +56,7 @@ export function TermsView({ hash }: { hash: Hex }) {
   return (
     <div className="space-y-1 text-sm">
       {doc.address && <p className="text-zinc-400">{doc.address}</p>}
+      {doc.photos && doc.photos.length > 0 && <PhotoGrid photos={doc.photos} />}
       {doc.rentVnd > 0 && (
         <p>
           <b>{t.terms.rent(`${doc.rentVnd.toLocaleString(t.locale)} ₫`)}</b> <span className="text-zinc-400">{t.terms.rentNote}</span>
@@ -171,6 +172,12 @@ function PhotoPicker({ files, onChange }: { files: File[]; onChange: (f: File[])
   );
 }
 
+/** Loads one of the bundled sample photos (public/demo) as a File, for the judge demo. */
+async function sampleFile(name: string) {
+  const res = await fetch(`/demo/${name}`);
+  return new File([await res.blob()], name, { type: "image/jpeg" });
+}
+
 async function uploadAll(files: File[]) {
   const out: Hex[] = [];
   for (const f of files) out.push(await uploadPhoto(f));
@@ -222,13 +229,26 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
           <PhotoPicker files={it.files} onChange={(files) => setItems(items.map((x, j) => (j === i ? { ...x, files } : x)))} />
         </div>
       ))}
-      <button
-        type="button"
-        className="text-sm font-semibold text-brand-400 hover:text-brand-300"
-        onClick={() => setItems([...items, { label: t.docs.otherItem, note: "", files: [] }])}
-      >
-        {t.docs.addItem}
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          className="text-sm font-semibold text-brand-400 hover:text-brand-300"
+          onClick={() => setItems([...items, { label: t.docs.otherItem, note: "", files: [] }])}
+        >
+          {t.docs.addItem}
+        </button>
+        <button
+          type="button"
+          className="font-mono text-xs text-zinc-400 underline-offset-2 hover:text-white hover:underline"
+          onClick={async () => {
+            const names = ["wall-clean.jpg", "floor.jpg", "bathroom.jpg"];
+            const files = await Promise.all(names.map(sampleFile));
+            setItems(items.map((x, i) => (i < names.length ? { ...x, note: t.docs.sampleNotes[i], files: [files[i]] } : x)));
+          }}
+        >
+          {t.docs.samplePhotos}
+        </button>
+      </div>
       {err && <p className="text-sm text-rose-300">{err}</p>}
       <Button className="w-full" loading={uploading || busy} onClick={submit}>
         {uploading ? t.docs.uploading : t.docs.sendReport(total)}
@@ -277,6 +297,16 @@ export function EvidenceForm({
     <div className="space-y-2">
       <textarea className={inputCls} rows={3} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
       <PhotoPicker files={files} onChange={setFiles} />
+      <button
+        type="button"
+        className="font-mono text-xs text-zinc-400 underline-offset-2 hover:text-white hover:underline"
+        onClick={async () => {
+          setFiles([await sampleFile(role === "landlord" ? "wall-stain.jpg" : "wall-clean.jpg")]);
+          if (!text.trim()) setText(role === "landlord" ? t.docs.sampleLandlordText : t.docs.sampleTenantText);
+        }}
+      >
+        {t.docs.samplePhotos}
+      </button>
       {err && <p className="text-sm text-rose-300">{err}</p>}
       <Button className="w-full" loading={uploading || busy} onClick={submit}>
         {submitLabel}

@@ -2,7 +2,8 @@
 
 import { type Address, type Hex, encodeFunctionData, parseSignature, toHex } from "viem";
 import { publicClient, chainNow } from "./client";
-import { ESCROW, FORWARDER, TOKEN, chain, escrowAbi, forwarderAbi, tokenAbi } from "./config";
+import type { Abi } from "viem";
+import { BADGE, ESCROW, FORWARDER, TOKEN, badgeAbi, chain, escrowAbi, forwarderAbi, tokenAbi } from "./config";
 import { AppError } from "./errors";
 
 type Signer = {
@@ -75,7 +76,17 @@ export async function signDepositAuth(signer: Signer, value: bigint): Promise<Au
  * and the contract still sees the user as the sender (ERC-2771).
  */
 export async function relayEscrowCall(signer: Signer, functionName: string, args: readonly unknown[]): Promise<Hex> {
-  const data = encodeFunctionData({ abi: escrowAbi, functionName, args });
+  return relayCallRaw(signer, ESCROW, escrowAbi, functionName, args);
+}
+
+/** Claims the soulbound "Trusted landlord" badge without gas. */
+export async function relayBadgeClaim(signer: Signer): Promise<Hex> {
+  return relayCallRaw(signer, BADGE, badgeAbi, "claim", []);
+}
+
+/** Relays any call to one of Coc's contracts (the server refuses other targets). */
+export async function relayCallRaw(signer: Signer, target: Address, abi: Abi, functionName: string, args: readonly unknown[]): Promise<Hex> {
+  const data = encodeFunctionData({ abi, functionName, args });
   const nonce = (await publicClient.readContract({
     address: FORWARDER,
     abi: forwarderAbi,
@@ -83,7 +94,7 @@ export async function relayEscrowCall(signer: Signer, functionName: string, args
     args: [signer.address],
   })) as bigint;
   const deadline = (await chainNow()) + 3600;
-  const request = { from: signer.address, to: ESCROW, value: 0n, gas: 1_000_000n, nonce, deadline, data };
+  const request = { from: signer.address, to: target, value: 0n, gas: 1_000_000n, nonce, deadline, data };
   const signature = await signer.signTypedData({
     domain: { name: "CocForwarder", version: "1", chainId: chain.id, verifyingContract: FORWARDER },
     types: FORWARD_TYPES,

@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "keeper": "node scripts/keeper-loop.mjs"
   },
   "dependencies": {
+    "@vercel/blob": "2.8.2",
     "next": "15.5.29",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",

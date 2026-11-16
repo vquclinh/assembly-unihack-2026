@@ -2,12 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { type Address, getAddress, isAddress, parseEventLogs, zeroAddress } from "viem";
+import { type Address, type Hex, getAddress, isAddress, parseEventLogs, zeroAddress } from "viem";
 import { useToast } from "@/components/toast";
 import { Button, Card, Field, inputCls } from "@/components/ui";
 import { publicClient, chainNow } from "@/lib/client";
 import { escrowAbi, isDeployed } from "@/lib/config";
-import { uploadJson } from "@/lib/files";
+import { uploadJson, uploadPhoto } from "@/lib/files";
 import { errorText } from "@/lib/errors";
 import { fmtUsdc, parseVnd, shortAddr, vndToUsdc } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -49,6 +49,8 @@ export default function CreatePage() {
   const [mediator, setMediator] = useState("");
   const [lockTenant, setLockTenant] = useState("");
   const [yieldOptIn, setYieldOptIn] = useState(true);
+  const [listed, setListed] = useState(true);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
 
   const depositUsdc = vndToUsdc(parseVnd(deposit));
@@ -73,6 +75,8 @@ export default function CreatePage() {
     if (problems.length) return toast({ tone: "bad", text: problems[0] });
     setBusy(true);
     try {
+      const photoHashes: Hex[] = [];
+      for (const f of photos) photoHashes.push(await uploadPhoto(f));
       const terms: Terms = {
         kind: "terms",
         v: 1,
@@ -82,6 +86,8 @@ export default function CreatePage() {
         depositVnd: parseVnd(deposit),
         holdVnd: parseVnd(hold),
         notes: notes.trim(),
+        listed: listed && !lockTenant.trim(),
+        photos: photoHashes,
         createdAt: new Date().toISOString(),
       };
       const termsHash = await uploadJson(terms);
@@ -129,6 +135,41 @@ export default function CreatePage() {
         <Field label={c.notes} hint={c.notesHint}>
           <textarea className={inputCls} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
+        <Field label={c.photos} hint={c.photosHint}>
+          <div className="flex flex-wrap items-center gap-2">
+            {photos.map((f, i) => (
+              <button
+                key={`${f.name}-${i}`}
+                type="button"
+                onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
+                className="relative h-16 w-16 overflow-hidden border border-zinc-700"
+                title="×"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={URL.createObjectURL(f)} alt="" className="h-full w-full object-cover" />
+                <span className="absolute right-0 top-0 bg-black/70 px-1 text-xs text-white">×</span>
+              </button>
+            ))}
+            {photos.length < 6 && (
+              <span className="inline-flex h-16 cursor-pointer items-center border border-dashed border-zinc-600 px-3 text-xs text-zinc-300 hover:border-zinc-400">
+                {c.addPhotos}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => setPhotos([...photos, ...Array.from(e.target.files ?? [])].slice(0, 6))}
+                />
+              </span>
+            )}
+          </div>
+        </Field>
+        <label className="flex items-start gap-3 bg-zinc-900 p-3 text-sm">
+          <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-600" checked={listed} onChange={(e) => setListed(e.target.checked)} />
+          <span>
+            <b>{c.listed}</b> <span className="text-zinc-400">{c.listedBody}</span>
+          </span>
+        </label>
       </Card>
 
       <Card className="space-y-4">

@@ -57,3 +57,37 @@ body {
 input, select, textarea {
   color-scheme: dark;
 }
+
+/* Embedded pages (judge demo columns) drop the header and banner and use tighter spacing. */
+html[data-embed="1"] [data-chrome] {
+  display: none;
+}
+html[data-embed="1"] main {
+  padding-top: 0.75rem;
+  padding-bottom: 2rem;
+}
+
+/* Printing (the lease agreement page): white paper, no app chrome, no toasts. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  :root {
+    color-scheme: light;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  [data-chrome],
+  [data-toast],
+  nextjs-portal {
+    display: none !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}

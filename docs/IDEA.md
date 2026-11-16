@@ -14,12 +14,12 @@ Coc holds rental deposits in a smart contract on Avalanche, so a fake landlord c
 
 | Criterion | Points | How Coc earns them |
 |---|---|---|
-| Technical Implementation | 25 | Nine-state escrow machine, automatic deadlines, immediate payout of the undisputed part, ERC-4626 vault, push-with-pull-fallback payments, 29 tests |
-| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); verified contracts |
-| Creativity & Innovation | 15 | Not one of the 20 suggested topics. It combines the mechanics of #3 (stake and check-in), #8 (escrow with a dispute window) and #9 (yield on idle float) into a new, local problem |
-| Impact & Use Case | 15 | Anyone who has rented a room has worried about the deposit |
+| Technical Implementation | 25 | Nine-state escrow machine, automatic deadlines enforced by a keeper, immediate payout of the undisputed part, ERC-4626 vault, push-with-pull-fallback payments, a soulbound badge contract, 34 tests |
+| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); AI reports paid per call over x402 and settled on Avalanche; an ERC-5192 credential other contracts can read with `isTrusted`; verified contracts |
+| Creativity & Innovation | 15 | Not one of the 20 suggested topics. It combines the mechanics of #3 (stake and check-in), #8 (escrow with a dispute window) and #9 (yield on idle float) into a new, local problem, and adds an AI damage assessor that is paid by machine-to-machine payment but can never move money |
+| Impact & Use Case | 15 | Anyone who has rented a room has worried about the deposit. A room finder where every listing is an escrow link, signed scam reports, a printable bilingual agreement and calendar reminders make it usable by people who never heard of a blockchain |
 | Presentation & Pitching | 10 | Opening line: "Who here has lost a deposit?" |
-| UI/UX & Demo | 10 | Three-role demo on a phone, one button per step, bilingual |
+| UI/UX & Demo | 10 | A one-click judge demo with landlord, tenant and mediator side by side, live stats, one button per step, bilingual |
 
 ## Hard questions and our answers
 
@@ -42,11 +42,20 @@ Only leases that reached move-in count, weighted by deposit size multiplied by t
 Yield is opt-in for both sides. If the vault loses value, the contract pays out from what is left and never gets stuck. The demo uses a simulated vault.
 
 **Privacy?**
-Photos and lease details stay off-chain; only hashes are on-chain. Reputation only contains objective numbers, no comments.
+Photos and lease details stay off-chain; only hashes are on-chain. Reputation only contains objective numbers, no comments. Photos of a publicly listed room are public, and an AI report sends that lease's photos to the AI provider.
+
+**Can the AI decide who gets the money?**
+No. The AI report is advice for the mediator, paid per report over x402. The contract only accepts the mediator's signed ruling, and the AI's answer is stored with its inputs' fingerprints so anyone can see what it was shown.
+
+**Can scam reports be used to smear an honest landlord?**
+Reports are signed by a wallet, one per wallet per landlord, and shown apart from the on-chain record, which stays the fact. The badge depends only on the on-chain record, never on reports.
 
 ## Roadmap
 
 - v0.1: contracts and tests.
 - v0.2: web app for tenants, landlords and mediators, gasless relayer, evidence store.
 - v0.3: English codebase, bilingual UI, live on Fuji.
-- Next: AI comparison of move-in and move-out photos (pay-per-report over x402), pitch deck and demo video.
+- v0.4: project proposal (Markdown and PDF).
+- v0.5: Avalanche dark theme for the app and the proposal.
+- v0.6: judge demo, AI damage reports over x402, trusted landlord badge, room finder with scam reports, live stats, keeper, bilingual printable agreement and calendar reminders.
+- Next: test the whole flow on Fuji, host on Vercel, verify the badge on Snowtrace, pitch deck and demo video.

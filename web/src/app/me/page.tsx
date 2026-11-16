@@ -1,5 +1,6 @@
 "use client";
 
+import { TrustCard } from "@/components/TrustBadge";
 import Link from "next/link";
 import { useMemo } from "react";
 import type { Address } from "viem";
@@ -96,6 +97,8 @@ export default function MePage() {
           ))}
         </div>
       </section>
+
+      {stats && <TrustCard address={me} completed={stats.landlord.completed} />}
 
       {stats && (
         <section className="grid gap-6 lg:grid-cols-2">

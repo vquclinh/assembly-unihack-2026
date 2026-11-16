@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { type Address, type Hex, concat, getAddress, isAddress, isHex } from "viem";
-import { ESCROW, FORWARDER, forwarderAbi, isDeployed } from "@/lib/config";
+import { BADGE, ESCROW, FORWARDER, forwarderAbi, hasBadge, isDeployed } from "@/lib/config";
 import { decodeRevert, relayerWallet, serverPublic } from "@/lib/server";
 
 export const runtime = "nodejs";
@@ -25,8 +25,9 @@ export async function POST(req: Request) {
   if (!r || !isAddress(r.from) || !isAddress(r.to) || !isHex(r.data) || !isHex(body.signature)) {
     return NextResponse.json({ error: "BadParams" }, { status: 400 });
   }
-  // The relayer only pays gas for calls into the escrow, never for arbitrary contracts.
-  if (getAddress(r.to) !== getAddress(ESCROW) || r.value !== "0") {
+  // The relayer only pays gas for calls into Coc's own contracts, never for arbitrary ones.
+  const allowed = [getAddress(ESCROW), ...(hasBadge ? [getAddress(BADGE)] : [])];
+  if (!allowed.includes(getAddress(r.to)) || r.value !== "0") {
     return NextResponse.json({ error: "NotAllowed" }, { status: 400 });
   }
   const gas = BigInt(r.gas);
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
 
   // Dry-run the inner call exactly as the forwarder will make it, to return a readable error.
   try {
-    await serverPublic.call({ account: FORWARDER, to: ESCROW, data: concat([request.data, request.from]), gas });
+    await serverPublic.call({ account: FORWARDER, to: request.to, data: concat([request.data, request.from]), gas });
   } catch (e) {
     const { code, detail } = decodeRevert(e);
     return NextResponse.json({ error: code ?? "Reverted", detail }, { status: 400 });

@@ -18,8 +18,8 @@ export function Header() {
         : "text-zinc-400 hover:text-white",
     );
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-800 bg-canvas/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
+    <header data-chrome className="sticky top-0 z-30 border-b border-zinc-800 bg-canvas/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
         <Link href="/" className="flex items-center gap-2.5">
           <LogoMark className="h-8 w-8" />
           <span className="text-xl font-extrabold tracking-tight text-white">
@@ -27,11 +27,26 @@ export function Header() {
           </span>
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2">
-          <Link href="/create" className={cx(navCls("/create"), "hidden md:block")}>
+          <Link href="/rooms" className={cx(navCls("/rooms"), "hidden sm:block")}>
+            {t.nav.rooms}
+          </Link>
+          <Link href="/create" className={cx(navCls("/create"), "hidden lg:block")}>
             {t.nav.create}
+          </Link>
+          <Link href="/stats" className={cx(navCls("/stats"), "hidden lg:block")}>
+            {t.nav.stats}
           </Link>
           <Link href="/me" className={navCls("/me")}>
             {t.nav.mine}
+          </Link>
+          <Link
+            href="/demo"
+            className={cx(
+              "hidden border px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-colors md:block",
+              path === "/demo" ? "border-brand-500 bg-brand-500 text-white" : "border-brand-500/60 text-brand-400 hover:bg-brand-500 hover:text-white",
+            )}
+          >
+            {t.nav.demo}
           </Link>
           <div className="flex border border-zinc-700 font-mono text-xs font-bold" role="group" aria-label={t.langToggleTitle}>
             {(["en", "vi"] as const).map((l) => (

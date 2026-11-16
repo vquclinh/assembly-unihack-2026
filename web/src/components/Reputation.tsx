@@ -45,7 +45,7 @@ export function StatsGrid({ s, role }: { s: Stats; role: "landlord" | "tenant" }
     [t.rep.lost, s.disputesLost, s.disputesLost > 0],
     [role === "landlord" ? t.rep.timeoutsLandlord : t.rep.timeoutsTenant, s.timeouts, s.timeouts > 0],
     [role === "landlord" ? t.rep.ghostLandlord : t.rep.ghostTenant, s.ghosted, s.ghosted > 0],
-    [t.rep.volume, `${usdcDays(s).toLocaleString(t.locale, { maximumFractionDigits: 1 })} ${t.rep.usdcDays}`],
+    [t.rep.volume, `${usdcDays(s).toLocaleString(t.locale, { maximumFractionDigits: usdcDays(s) < 1 ? 3 : 1 })} ${t.rep.usdcDays}`],
   ];
   return (
     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">

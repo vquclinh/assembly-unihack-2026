@@ -15,8 +15,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* ?embed=1 hides the site chrome so a page can sit inside the judge demo. */}
+        <script dangerouslySetInnerHTML={{ __html: "if(/[?&]embed=1/.test(location.search))document.documentElement.dataset.embed='1'" }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
@@ -28,7 +30,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <ToastProvider>
               <NetworkBanner />
               <Header />
-              <main className="mx-auto max-w-5xl px-4 pb-24 pt-6">{children}</main>
+              <main className="mx-auto max-w-6xl px-4 pb-24 pt-6">{children}</main>
             </ToastProvider>
           </WalletProvider>
         </I18nProvider>

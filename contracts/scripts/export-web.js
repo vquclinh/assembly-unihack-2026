@@ -6,7 +6,7 @@ const WEB_LIB = path.join(__dirname, "..", "..", "web", "src", "lib");
 
 async function exportAbis(hre) {
   if (!fs.existsSync(WEB_LIB)) return false;
-  const names = ["CocEscrow", "CocForwarder", "MockUSDC", "DemoYieldVault"];
+  const names = ["CocEscrow", "CocForwarder", "MockUSDC", "DemoYieldVault", "CocBadge"];
   const out = {};
   for (const n of names) out[n] = (await hre.artifacts.readArtifact(n)).abi;
   fs.writeFileSync(path.join(WEB_LIB, "abis.json"), JSON.stringify(out, null, 2) + "\n");
