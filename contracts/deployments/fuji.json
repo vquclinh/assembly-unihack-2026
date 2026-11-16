@@ -10,5 +10,7 @@
   "responseWindow": 300,
   "mediationTimeout": 600,
   "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
-  "explorer": "https://testnet.snowtrace.io"
+  "explorer": "https://testnet.snowtrace.io",
+  "badge": "0x8C5EA878bE96ADA142349283a50fc3AEF3e63551",
+  "badgeMinCompleted": 1
 }
