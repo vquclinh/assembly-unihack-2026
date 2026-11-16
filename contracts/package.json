@@ -1,12 +1,14 @@
 {
   "name": "coc-contracts",
   "version": "0.1.0",
-  "description": "Cọc: neutral rental deposit escrow on Avalanche",
+  "description": "Coc: neutral rental deposit escrow on Avalanche",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:fuji": "hardhat run scripts/deploy.js --network fuji",
-    "deploy:local": "hardhat run scripts/deploy.js"
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "node": "hardhat node",
+    "export-web": "hardhat run scripts/export-web.js"
   },
   "keywords": [],
   "author": "",

@@ -1,62 +1,80 @@
-# Cọc
+# Coc (Cọc)
 
-**Nơi giữ tiền cọc phòng trọ trung lập cho sinh viên, chạy trên Avalanche.**
+**A neutral rental deposit escrow for students, running on Avalanche.**
 Team Assembly, Team1 Vietnam UniHack 2026.
 
-Tiền cọc nằm trong smart contract thay vì trong túi chủ trọ. Không ai, kể cả hòa giải viên và chính team phát triển, có thể chuyển tiền đi đâu khác ngoài người thuê hoặc chủ trọ.
+*"Cọc" is Vietnamese for "deposit".* The deposit sits in a smart contract instead of in the landlord's pocket. Nobody, not the mediator and not the team that built this, can send it anywhere except to the tenant or the landlord.
 
-## Vấn đề
+## The problem
 
-- Mùa nhập học nào cũng có sinh viên mất tiền cọc giữ chỗ cho "phòng trọ ảo".
-- Hết hợp đồng, chủ trọ tìm cớ giữ cọc và sinh viên không có cách nào đòi.
-- Việt Nam chưa có bên thứ ba trung lập giữ tiền cọc như cơ chế bảo vệ tiền cọc ở Anh.
+- Every back-to-school season, students lose holding deposits to fake room listings.
+- At move-out, landlords find excuses to keep the deposit, and tenants have nowhere to turn.
+- Vietnam has no neutral third party that holds rental deposits, unlike deposit protection schemes in countries such as the UK.
 
-## Cọc hoạt động thế nào
+## How it works
 
-| Bước | Ai làm | Điều gì xảy ra on-chain |
+| Step | Who | What happens on-chain |
 |---|---|---|
-| 1. Tạo link cọc | Chủ trọ | `createOffer`: số tiền giữ chỗ, tổng cọc, hạn nhận phòng, hòa giải viên |
-| 2. Giữ chỗ | Người thuê | `reserve`: tiền giữ chỗ vào contract, chủ trọ chưa chạm được |
-| 3. Nhận phòng | Cả hai | Chủ trọ `proposeCondition` (hash bộ ảnh hiện trạng), người thuê `confirmMoveIn` và nạp đủ cọc |
-| 4. Trả phòng | Chủ trọ | `proposeSettlement(0)`: trả đủ cọc trong một giao dịch |
-| 4b. Có khấu trừ | Cả hai | Chủ trọ đề nghị trừ kèm bằng chứng, người thuê `acceptSettlement` hoặc `dispute` |
-| 5. Tranh chấp | Hòa giải viên | `resolve`: chỉ được chia phần đang tranh chấp cho hai bên |
+| 1. Create a deposit link | Landlord | `createOffer`: holding amount, total deposit, move-in deadline, mediator |
+| 2. Reserve | Tenant | `reserve`: the holding deposit moves into the contract; the landlord cannot touch it |
+| 3. Move in | Both | Landlord `proposeCondition` (hash of the photo report), tenant `confirmMoveIn` and tops up to the full deposit |
+| 4. Move out | Landlord | `proposeSettlement(0)`: the full deposit goes back in one transaction |
+| 4b. Deduction | Both | Landlord proposes a deduction with evidence; tenant `acceptSettlement` or `dispute` |
+| 5. Dispute | Mediator | `resolve`: can only split the disputed amount between the two parties |
 
-Mọi trạng thái chờ đều có hạn chót. Quá hạn thì ai cũng gọi được `finalize`, nên tiền không bao giờ bị kẹt:
+Every waiting state has a deadline. After it passes, anyone can call `finalize`, so money never gets stuck:
 
-- Chủ trọ biến mất sau khi nhận giữ chỗ: người thuê nhận lại tiền.
-- Người thuê không đến: chủ trọ nhận tiền giữ chỗ (đúng tinh thần Điều 328 Bộ luật Dân sự).
-- Chủ trọ im lặng khi người thuê xin trả cọc: hoàn đủ cho người thuê.
-- Người thuê im lặng trước đề nghị khấu trừ: khấu trừ có hiệu lực.
-- Hòa giải viên im lặng: phần tranh chấp chia đôi.
+- Landlord disappears after taking a reservation: the tenant is refunded.
+- Tenant never shows up: the landlord receives the holding deposit (the same rule as Article 328 of Vietnam's Civil Code).
+- Landlord stays silent when the tenant asks for the deposit: full refund to the tenant.
+- Tenant stays silent on a proposed deduction: the deduction stands.
+- Mediator stays silent: the disputed amount is split 50/50.
 
-### Điểm đáng chú ý
+### Highlights
 
-- **Chủ trọ ảo không lấy được tiền.** Chỉ người thuê mới xác nhận được việc đã nhận phòng.
-- **Hòa giải viên không thể chiếm tiền.** Không có đường nào trong code chuyển tiền cho hòa giải viên.
-- **Phần không tranh chấp trả ngay.** Khi có tranh chấp, người thuê nhận ngay phần chủ trọ không đòi.
-- **Không cần AVAX.** Người dùng ký, relayer trả gas (ERC-2771), tiền cọc chuyển bằng chữ ký USDC (EIP-3009).
-- **Hồ sơ uy tín on-chain.** Số hợp đồng hoàn tất, số lần trả cọc êm đẹp, số lần tranh chấp và thua, số lần im lặng. Có trọng số theo giá trị và thời gian nên khó làm giả.
-- **Sinh lời là tùy chọn.** Chỉ bật khi cả hai bên đồng ý, lãi chia đôi. Bản demo dùng vault mô phỏng.
+- **A fake landlord gets nothing.** Only the tenant can confirm the room was handed over.
+- **The mediator cannot take the money.** No code path pays the mediator.
+- **Undisputed money is paid at once.** In a dispute, the tenant immediately receives everything the landlord is not claiming.
+- **No AVAX needed.** Users sign, a relayer pays gas (ERC-2771), and deposits move with a signed USDC authorization (EIP-3009).
+- **On-chain reputation.** Completed leases, amicable settlements, disputes lost, silences. Weighted by value and time, so it is expensive to fake.
+- **Optional yield.** Only on when both sides agree, split 50/50. The demo uses a simulated vault.
+- **Tamper-evident evidence.** Photos and reports are stored off-chain under their keccak256 hash; only the hash goes on-chain, and the app shows whether a document still matches it.
+- **Bilingual UI.** English by default, Vietnamese with one tap.
 
-## Cấu trúc repo
+## Deployment (Avalanche Fuji)
+
+| Contract | Address |
+|---|---|
+| CocEscrow | [`0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3`](https://testnet.snowtrace.io/address/0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3) |
+| CocForwarder | [`0xa147258E8C60fb29599F088aCCc74B97981865a8`](https://testnet.snowtrace.io/address/0xa147258E8C60fb29599F088aCCc74B97981865a8) |
+| MockUSDC (test token) | [`0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87`](https://testnet.snowtrace.io/address/0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87) |
+| DemoYieldVault | [`0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6`](https://testnet.snowtrace.io/address/0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6) |
+
+Demo deadlines: 5 minutes to respond, 10 minutes to mediate.
+
+## Repository layout
 
 ```
 contracts/            Hardhat project
-  contracts/CocEscrow.sol        Contract chính
-  contracts/CocForwarder.sol     Forwarder cho giao dịch không cần gas
-  contracts/mocks/               USDC thử nghiệm và vault mô phỏng
-  test/CocEscrow.test.js         29 test
-  scripts/deploy.js              Deploy lên Fuji
+  contracts/CocEscrow.sol        Main escrow contract
+  contracts/CocForwarder.sol     ERC-2771 forwarder for gasless calls
+  contracts/mocks/               Test USDC (with EIP-3009) and a simulated yield vault
+  test/CocEscrow.test.js         29 tests
+  scripts/deploy.js              Deploys and points the web app at the new addresses
+web/                  Next.js app (UI + relayer + evidence store)
+  src/app/                       Pages: /, /create, /l/[id], /me, /u/[address]
+  src/app/api/relay              Relayer: the user signs, the server pays gas
+  src/app/api/faucet             Hands out test USDC
+  src/app/api/files              Content-addressed photo and report store
+  src/lib/i18n.tsx               English and Vietnamese UI text
+  src/lib/deployment.json        Contract addresses (written by the deploy script)
 docs/
-  IDEA.md             Ý tưởng, đối chiếu barem, câu hỏi phản biện
+  IDEA.md             Idea, scoring rubric fit, and answers to hard questions
 ```
 
-Giao diện web sẽ có ở phiên bản tiếp theo.
+## Run the contract tests
 
-## Chạy thử
-
-Cần Node.js 20 trở lên.
+Requires Node.js 20 or newer.
 
 ```bash
 cd contracts
@@ -64,18 +82,55 @@ npm install
 npm test
 ```
 
-## Deploy lên Avalanche Fuji
+## Run the web app
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. The relayer reuses `PRIVATE_KEY` from `contracts/.env` to pay gas for users, so no extra setup is needed. To use a different wallet, copy `web/.env.example` to `web/.env.local` and set `RELAYER_PRIVATE_KEY`.
+
+### Demo script on one machine
+
+1. Press **Create wallet** at the top and create three quick wallets: "Landlord", "Tenant", "Mediator".
+2. Pick Landlord, open **Create deposit link**, choose the Mediator wallet as mediator, and create the link.
+3. Switch to Tenant, press **Get 500 test USDC**, then **Pay holding deposit**.
+4. Switch to Landlord, photograph each item and send the condition report.
+5. Switch to Tenant, check the photos (marked "Matches on-chain fingerprint") and **Confirm move-in**.
+6. Tenant presses **I moved out, return my deposit**. Landlord **Proposes a deduction** with a photo.
+7. Tenant presses **I disagree**: the undisputed part arrives at once.
+8. Switch to Mediator, drag the split slider, write a reason and **Finalize ruling**. See the **On-chain receipt**.
+
+### Fully offline (no Fuji)
+
+```bash
+cd contracts && npm run node                 # terminal 1: local blockchain
+cd contracts && npm run deploy:localhost     # terminal 2
+cd web && npm run dev                        # terminal 3
+```
+
+For a local chain, `contracts/.env` needs `PRIVATE_KEY` set to the first account printed by `npm run node`. Deploy to Fuji again before committing, because `deployment.json` will point at localhost.
+
+## Deploy to Avalanche Fuji
 
 ```bash
 cd contracts
-cp .env.example .env      # điền PRIVATE_KEY của ví testnet
+cp .env.example .env      # set PRIVATE_KEY to a testnet-only wallet
 npm run deploy:fuji
 ```
 
-Lấy AVAX testnet tại faucet của ban tổ chức (https://team1vn.xyz/faucet.html) hoặc https://core.app/tools/testnet-faucet. Địa chỉ contract được ghi vào `contracts/deployments/fuji.json`, script cũng in sẵn lệnh verify trên Snowtrace.
+No wallet yet? This creates one, saves the key into `.env` and prints the address:
 
-Để `USDC_ADDRESS` trống thì script deploy một USDC thử nghiệm có faucet công khai. Muốn dùng USDC testnet của Circle thì điền `0x5425890298aed601595a70AB815c96711a31Bc65`.
+```bash
+node -e "const fs=require('fs');const w=require('ethers').Wallet.createRandom();fs.writeFileSync('.env',fs.readFileSync('.env','utf8').replace(/^PRIVATE_KEY=.*$/m,'PRIVATE_KEY='+w.privateKey));console.log(w.address)"
+```
 
-## Lưu ý
+Get testnet AVAX from the organisers' faucet (https://team1vn.xyz/faucet.html) or https://core.app/tools/testnet-faucet (coupon `avalanche-academy`). Addresses are written to `contracts/deployments/fuji.json` and `web/src/lib/deployment.json`, and the script prints the Snowtrace verify commands.
 
-Đây là bản prototype trên testnet cho mục đích hackathon, chưa được audit và không phải tư vấn pháp lý. Contract không phụ thuộc vào một token cụ thể. Cọc chỉ giữ tài sản bảo đảm, không xử lý tiền thuê nhà.
+Leave `USDC_ADDRESS` empty to deploy a test USDC with a public faucet, or set it to Circle's Fuji test USDC: `0x5425890298aed601595a70AB815c96711a31Bc65`.
+
+## Disclaimer
+
+This is a testnet prototype built for a hackathon. It has not been audited and is not legal advice. The contract is token-agnostic. Coc only holds the security deposit and never handles rent.

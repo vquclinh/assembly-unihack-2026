@@ -1,0 +1,14 @@
+{
+  "network": "fuji",
+  "chainId": 43113,
+  "deployer": "0xA8AA8D2B6F7790e6104474139DBC756e9DE91cdC",
+  "token": "0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87",
+  "mockToken": true,
+  "vault": "0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6",
+  "forwarder": "0xa147258E8C60fb29599F088aCCc74B97981865a8",
+  "escrow": "0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3",
+  "responseWindow": 300,
+  "mediationTimeout": 600,
+  "rpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
+  "explorer": "https://testnet.snowtrace.io"
+}

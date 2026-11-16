@@ -1,52 +1,52 @@
-# Cọc: ý tưởng và phản biện
+# Coc: the idea and the hard questions
 
-## Một câu
+## One sentence
 
-Cọc giữ tiền cọc phòng trọ trong smart contract trên Avalanche, để chủ trọ ảo không lừa được và chủ trọ thật không tự ý giữ cọc.
+Coc holds rental deposits in a smart contract on Avalanche, so a fake landlord cannot scam a student and a real landlord cannot keep the deposit on a whim.
 
-## Đối tượng
+## Who it is for
 
-- **Người thuê:** sinh viên, người mới lên thành phố.
-- **Chủ trọ:** người cho thuê đàng hoàng, muốn chứng minh mình uy tín và muốn có bằng chứng khi người thuê làm hỏng phòng.
-- **Hòa giải viên:** bên thứ ba hai bên cùng chọn, ví dụ trung tâm hỗ trợ sinh viên của trường.
+- **Tenants:** students and young workers who are new to the city.
+- **Landlords:** honest landlords who want to prove they are trustworthy, and who want evidence when a tenant damages the room.
+- **Mediators:** a third party both sides pick up front, for example a university's student affairs office.
 
-## Đối chiếu barem (100 điểm)
+## Fit with the judging rubric (100 points)
 
-| Tiêu chí | Điểm | Cọc lấy điểm bằng gì |
+| Criterion | Points | How Coc earns them |
 |---|---|---|
-| Technical Implementation | 25 | Máy trạng thái escrow 9 trạng thái, hạn chót tự động, trả ngay phần không tranh chấp, vault ERC-4626, 29 test |
-| Avalanche Integration | 25 | Toàn bộ tiền và luật nằm trên Fuji, USDC, không cần gas (ERC-2771 và EIP-3009), contract verify công khai |
-| Creativity & Innovation | 15 | Không nằm trong 20 chủ đề gợi ý. Ghép cơ chế của #3, #8, #9 vào một bài toán mới |
-| Impact & Use Case | 15 | Ai thuê trọ cũng từng lo mất cọc |
-| Presentation & Pitching | 10 | Mở đầu: "Ai ở đây từng mất cọc?" |
-| UI/UX & Demo | 10 | Demo hai vai trên điện thoại, mỗi bước một nút |
+| Technical Implementation | 25 | Nine-state escrow machine, automatic deadlines, immediate payout of the undisputed part, ERC-4626 vault, push-with-pull-fallback payments, 29 tests |
+| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); verified contracts |
+| Creativity & Innovation | 15 | Not one of the 20 suggested topics. It combines the mechanics of #3 (stake and check-in), #8 (escrow with a dispute window) and #9 (yield on idle float) into a new, local problem |
+| Impact & Use Case | 15 | Anyone who has rented a room has worried about the deposit |
+| Presentation & Pitching | 10 | Opening line: "Who here has lost a deposit?" |
+| UI/UX & Demo | 10 | Three-role demo on a phone, one button per step, bilingual |
 
-## Câu hỏi phản biện và cách trả lời
+## Hard questions and our answers
 
-**Đặt cọc bằng USDC có hợp pháp ở Việt Nam không?**
-Đây là vùng xám và team nói thẳng điều đó. Từ 1/1/2026 tài sản số được công nhận là tài sản. Khung thí điểm theo Nghị quyết 05/2025/NQ-CP yêu cầu giao dịch qua đơn vị được cấp phép. Cọc chỉ giữ tài sản bảo đảm, không xử lý tiền thuê, nên không dùng crypto làm phương tiện thanh toán. Contract không phụ thuộc token: bản demo dùng USDC testnet, bản thật sẽ dùng tài sản được cấp phép. Nền tảng không giữ tiền của ai.
+**Is a USDC deposit legal in Vietnam?**
+It is a grey area and we say so openly. Since 1 January 2026 digital assets are recognised as property under the Law on Digital Technology Industry. The pilot framework in Resolution 05/2025/NQ-CP requires crypto trading to go through licensed providers. Coc only holds collateral and never processes rent, so it does not use crypto as a means of payment. The contract is token-agnostic: the demo uses testnet USDC like the organisers' own suggested topics, and a production version would use whatever licensed asset the law allows. The platform never holds anyone's money.
 
-**Chủ trọ đang có lợi thế, sao họ chịu dùng?**
-Ba lý do: contract bảo vệ cả chủ trọ khi người thuê bỏ đi hoặc làm hỏng phòng; hồ sơ uy tín giúp họ có khách; và các trường có thể yêu cầu dùng Cọc để vào danh sách nhà trọ an toàn.
+**Landlords hold the power today. Why would they use it?**
+Three reasons: the contract protects landlords too when a tenant walks away or damages the room; the public record helps good landlords win tenants; and universities can require Coc for their "safe housing" lists.
 
-**Chủ trọ ảo vẫn lừa được không?**
-Không. Chỉ người thuê mới xác nhận được việc nhận phòng. Chủ trọ khai người thuê không đến thì người thuê có quyền phản đối, và hòa giải viên quyết định.
+**Can a fake landlord still scam a tenant?**
+No. Only the tenant can confirm move-in. If the landlord claims a no-show, the tenant can object and the mediator decides.
 
-**Hòa giải viên thông đồng thì sao?**
-Hai bên cùng chọn hòa giải viên từ đầu. Hòa giải viên chỉ chia được phần tranh chấp, không rút được về ví mình, và lịch sử phân xử của họ công khai.
+**What if the mediator colludes with one side?**
+Both sides pick the mediator up front. The mediator can only split the disputed amount, can never pay themselves, and their record of rulings and timeouts is public.
 
-**Điểm uy tín có làm giả được không?**
-Chỉ hợp đồng đã hoàn tất mới được tính, có trọng số theo số tiền nhân thời gian giữ. Muốn làm giả phải khóa tiền thật trong thời gian dài.
+**Can reputation be faked?**
+Only leases that reached move-in count, weighted by deposit size multiplied by time held. Faking it means locking real money for a long time.
 
-**Vault sinh lời mất tiền thì sao?**
-Sinh lời là tùy chọn, hai bên cùng bật mới chạy. Nếu vault lỗ, contract vẫn chi trả theo số còn lại và không bị kẹt. Bản demo dùng vault mô phỏng.
+**What if the yield vault loses money?**
+Yield is opt-in for both sides. If the vault loses value, the contract pays out from what is left and never gets stuck. The demo uses a simulated vault.
 
-**Quyền riêng tư?**
-Ảnh và hợp đồng nằm ngoài chuỗi, on-chain chỉ lưu hash. Hồ sơ uy tín chỉ gồm số liệu khách quan, không có bình luận.
+**Privacy?**
+Photos and lease details stay off-chain; only hashes are on-chain. Reputation only contains objective numbers, no comments.
 
-## Lộ trình
+## Roadmap
 
-- v0.1: contract và test.
-- v0.2: giao diện web cho người thuê và chủ trọ.
-- v0.3: relayer không cần gas, trang hồ sơ uy tín, trang hòa giải.
-- v0.4: AI so ảnh nhận phòng và trả phòng (nếu kịp, trả phí từng lần qua x402).
+- v0.1: contracts and tests.
+- v0.2: web app for tenants, landlords and mediators, gasless relayer, evidence store.
+- v0.3: English codebase, bilingual UI, live on Fuji.
+- Next: AI comparison of move-in and move-out photos (pay-per-report over x402), pitch deck and demo video.
