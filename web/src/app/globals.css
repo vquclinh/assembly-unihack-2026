@@ -66,6 +66,14 @@ html[data-embed="1"] main {
   padding-top: 0.75rem;
   padding-bottom: 2rem;
 }
+/* Inside the judge demo panels: a compact title and no share card (everyone is already here). */
+html[data-embed="1"] [data-embed-hide] {
+  display: none;
+}
+html[data-embed="1"] [data-embed-title] {
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
 
 /* Printing (the lease agreement page): white paper, no app chrome, no toasts. */
 @media print {

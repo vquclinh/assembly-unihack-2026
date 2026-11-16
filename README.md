@@ -64,9 +64,11 @@ Every waiting state has a deadline. After it passes, anyone can call `finalize`,
 | CocForwarder | [`0xa147258E8C60fb29599F088aCCc74B97981865a8`](https://testnet.snowtrace.io/address/0xa147258E8C60fb29599F088aCCc74B97981865a8) |
 | MockUSDC (test token) | [`0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87`](https://testnet.snowtrace.io/address/0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87) |
 | DemoYieldVault | [`0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6`](https://testnet.snowtrace.io/address/0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6) |
-| CocBadge | run `npm run deploy-badge:fuji` in `contracts/`; the address is added to `web/src/lib/deployment.json` |
+| CocBadge | [`0x8C5EA878bE96ADA142349283a50fc3AEF3e63551`](https://testnet.snowtrace.io/address/0x8C5EA878bE96ADA142349283a50fc3AEF3e63551) |
 
 Demo deadlines: 5 minutes to respond, 10 minutes to mediate.
+
+All five contracts are source-verified with an exact match on [Sourcify](https://repo.sourcify.dev/43113/0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3), which also forwards them to Routescan (Snowtrace). If the Snowtrace queue is slow, `npm run verify:sourcify -- <ContractName> <address>` in `contracts/` verifies any contract from the local build.
 
 ## Repository layout
 

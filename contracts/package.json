@@ -10,7 +10,8 @@
     "node": "hardhat node",
     "export-web": "hardhat run scripts/export-web.js",
     "deploy-badge:fuji": "hardhat run scripts/deploy-badge.js --network fuji",
-    "deploy-badge:localhost": "hardhat run scripts/deploy-badge.js --network localhost"
+    "deploy-badge:localhost": "hardhat run scripts/deploy-badge.js --network localhost",
+    "verify:sourcify": "node scripts/verify-sourcify.js"
   },
   "keywords": [],
   "author": "",

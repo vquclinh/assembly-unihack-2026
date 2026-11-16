@@ -66,11 +66,11 @@ export default function LeasePage() {
           <span className="text-sm text-zinc-400">{t.lease.number(id.toString())}</span>
           <Badge tone={STATUS_TONE[L.status]}>{t.status[L.status]}</Badge>
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title ?? t.lease.roomFallback}</h1>
+        <h1 data-embed-title className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title ?? t.lease.roomFallback}</h1>
         <Stepper status={L.status} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
           <ActionPanel id={id} L={L} now={now} refresh={async () => void (await refresh())} />
 
@@ -100,7 +100,11 @@ export default function LeasePage() {
         </div>
 
         <aside className="space-y-6">
-          {L.status === Status.Offered && isLandlord && <ShareCard id={id.toString()} />}
+          {L.status === Status.Offered && isLandlord && (
+            <div data-embed-hide>
+              <ShareCard id={id.toString()} />
+            </div>
+          )}
           <MoneyCard L={L} value={snap.value} />
           {L.status === Status.Offered && !isLandlord && (
             <Card>

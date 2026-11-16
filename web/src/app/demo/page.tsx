@@ -183,7 +183,8 @@ export default function DemoPage() {
   const ph = L ? phase(L.status, L.conditionHash !== zeroHash) : null;
 
   return (
-    <div className="space-y-6">
+    // On wide screens the three panels use the whole window, not the 72rem page column.
+    <div className="space-y-6 lg:relative lg:left-1/2 lg:w-[calc(100vw-3rem)] lg:max-w-[112rem] lg:-translate-x-1/2">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow className="mb-3">{d.eyebrow}</Eyebrow>
@@ -257,7 +258,7 @@ export default function DemoPage() {
                     </a>
                   </div>
                 </header>
-                <iframe key={`${frameKey}-${role}`} src={src} title={d.roles[role]} className="h-[75vh] min-h-[560px] w-full bg-canvas" />
+                <iframe key={`${frameKey}-${role}`} src={src} title={d.roles[role]} className="h-[78vh] min-h-[560px] w-full bg-canvas" />
               </section>
             );
           })}

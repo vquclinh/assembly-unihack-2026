@@ -264,6 +264,7 @@ The MVP is complete and deployed on the Avalanche Fuji testnet:
 | CocForwarder | `0xa147258E8C60fb29599F088aCCc74B97981865a8` |
 | MockUSDC (test token) | `0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87` |
 | DemoYieldVault | `0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6` |
+| CocBadge | `0x8C5EA878bE96ADA142349283a50fc3AEF3e63551` |
 
 Delivered so far:
 

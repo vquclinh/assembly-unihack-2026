@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
+import { Icon } from "./icons";
 import { useEffect, useState } from "react";
 import { type Hex, zeroHash } from "viem";
 import { fetchJson, fileUrl, uploadJson, uploadPhoto } from "@/lib/files";
@@ -213,6 +214,13 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
 
   return (
     <div className="space-y-4">
+      <SampleButton
+        onClick={async () => {
+          const names = ["wall-clean.jpg", "floor.jpg", "bathroom.jpg"];
+          const files = await Promise.all(names.map(sampleFile));
+          setItems(items.map((x, i) => (i < names.length ? { ...x, note: t.docs.sampleNotes[i], files: [files[i]] } : x)));
+        }}
+      />
       {items.map((it, i) => (
         <div key={i} className="rounded-none border border-zinc-800 p-3">
           <input
@@ -236,17 +244,6 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
           onClick={() => setItems([...items, { label: t.docs.otherItem, note: "", files: [] }])}
         >
           {t.docs.addItem}
-        </button>
-        <button
-          type="button"
-          className="font-mono text-xs text-zinc-400 underline-offset-2 hover:text-white hover:underline"
-          onClick={async () => {
-            const names = ["wall-clean.jpg", "floor.jpg", "bathroom.jpg"];
-            const files = await Promise.all(names.map(sampleFile));
-            setItems(items.map((x, i) => (i < names.length ? { ...x, note: t.docs.sampleNotes[i], files: [files[i]] } : x)));
-          }}
-        >
-          {t.docs.samplePhotos}
         </button>
       </div>
       {err && <p className="text-sm text-rose-300">{err}</p>}
@@ -295,18 +292,14 @@ export function EvidenceForm({
   }
   return (
     <div className="space-y-2">
-      <textarea className={inputCls} rows={3} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
-      <PhotoPicker files={files} onChange={setFiles} />
-      <button
-        type="button"
-        className="font-mono text-xs text-zinc-400 underline-offset-2 hover:text-white hover:underline"
+      <SampleButton
         onClick={async () => {
           setFiles([await sampleFile(role === "landlord" ? "wall-stain.jpg" : "wall-clean.jpg")]);
           if (!text.trim()) setText(role === "landlord" ? t.docs.sampleLandlordText : t.docs.sampleTenantText);
         }}
-      >
-        {t.docs.samplePhotos}
-      </button>
+      />
+      <textarea className={inputCls} rows={3} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
+      <PhotoPicker files={files} onChange={setFiles} />
       {err && <p className="text-sm text-rose-300">{err}</p>}
       <Button className="w-full" loading={uploading || busy} onClick={submit}>
         {submitLabel}
@@ -318,4 +311,19 @@ export function EvidenceForm({
 export async function makeRuling(leaseId: string, text: string, toTenant: bigint) {
   const doc: Ruling = { kind: "ruling", v: 1, leaseId, text, toTenant: toTenant.toString(), createdAt: new Date().toISOString() };
   return uploadJson(doc);
+}
+
+/** Fills a form with the bundled sample photos, so a demo never waits for a camera. */
+function SampleButton({ onClick }: { onClick: () => void }) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-center gap-2 border border-dashed border-brand-500/60 bg-brand-500/5 px-3 py-2 text-sm font-semibold text-brand-400 transition-colors hover:bg-brand-500/15 hover:text-brand-300"
+    >
+      <Icon name="camera" className="h-4 w-4" />
+      {t.docs.samplePhotos}
+    </button>
+  );
 }
