@@ -5,10 +5,16 @@ import { getFile } from "./store";
 
 /**
  * AI damage assessment: compares the move-in photo report with the move-out evidence.
- * Uses any OpenAI-compatible vision model through OpenRouter (default: a small Qwen VL model).
+ * Uses any OpenAI-compatible vision model through OpenRouter (default: Gemini Flash Lite, with fallbacks).
  */
 
-export const AI_MODEL = process.env.OPENROUTER_MODEL || "qwen/qwen-2.5-vl-7b-instruct";
+/** Cheap vision models, tried in order. OpenRouter retires models from time to time, so one going away doesn't break reports. */
+const DEFAULT_MODELS = ["google/gemini-2.5-flash-lite", "google/gemini-2.0-flash-001", "openai/gpt-4o-mini"];
+/** OPENROUTER_MODEL may list several models, comma-separated; the defaults are tried after them. */
+const MODELS = [...new Set([...(process.env.OPENROUTER_MODEL ?? "").split(",").map((m) => m.trim()).filter(Boolean), ...DEFAULT_MODELS])];
+export const AI_MODEL = MODELS[0];
+/** Errors that mean "this model can't be used right now", as opposed to a bad key or no credit. */
+const MODEL_GONE = /no (allowed )?providers?|not a valid model|no endpoints|model.*(not found|unavailable|deprecated)|no longer available/i;
 const MAX_IMAGES = 8;
 
 export function aiConfigured() {
@@ -102,36 +108,47 @@ export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "
     }
   }
 
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "content-type": "application/json",
-      "x-title": "Coc deposit escrow",
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      temperature: 0.2,
-      max_tokens: 1200,
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: parts },
-      ],
-    }),
-  });
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
-  if (!res.ok || json.error) throw new Error(`OpenRouter ${res.status}: ${json.error?.message ?? "request failed"}`);
-  const content = json.choices?.[0]?.message?.content ?? "";
+  let model = "";
+  let content = "";
+  for (let i = 0; i < MODELS.length; i++) {
+    model = MODELS[i];
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "content-type": "application/json",
+        "x-title": "Coc deposit escrow",
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: 1200,
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: parts },
+        ],
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
+    if (res.ok && !json.error) {
+      content = json.choices?.[0]?.message?.content ?? "";
+      break;
+    }
+    const message = json.error?.message ?? "request failed";
+    const gone = res.status === 404 || MODEL_GONE.test(message);
+    if (!gone || i === MODELS.length - 1) throw new Error(`OpenRouter ${res.status}: ${message}`);
+    console.warn(`[ai] ${model} unavailable (${message.slice(0, 100)}), trying ${MODELS[i + 1]}`);
+  }
   let out: Record<string, unknown>;
   try {
     out = extractJson(content);
   } catch {
-    throw new Error(`${AI_MODEL} did not return valid JSON: ${content.slice(0, 120) || "(empty)"}`);
+    throw new Error(`${model} did not return valid JSON: ${content.slice(0, 120) || "(empty)"}`);
   }
 
   const findings = Array.isArray(out.findings) ? out.findings : [];
   return {
-    model: AI_MODEL,
+    model,
     summary: String(out.summary ?? "").slice(0, 1200),
     findings: findings.slice(0, 12).map((f) => {
       const x = f as Record<string, unknown>;

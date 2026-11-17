@@ -135,7 +135,7 @@ Optional settings in `web/.env.local` (all described in `web/.env.example`):
 
 | Variable | Turns on |
 |---|---|
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | AI damage reports. The default `qwen/qwen-2.5-vl-7b-instruct` costs a fraction of a cent per report. |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | AI damage reports. The default `google/gemini-2.5-flash-lite` costs a fraction of a cent per report; you can list several models, comma-separated, and the next one is used if a model is retired. |
 | `AI_REPORT_PRICE_USDC` | Price of one AI report over x402 (default 0.10 test USDC). |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage, so photos and records survive redeploys. |
 | `CRON_SECRET` | Protects the keeper sweep (`/api/keeper`) called by Vercel cron and GitHub Actions. |

@@ -28,6 +28,8 @@ type Write = { address: Address; abi: Abi; functionName: string; args: readonly 
 
 /** Submissions from this server instance go out one at a time, so two never pick the same nonce. */
 let queue: Promise<unknown> = Promise.resolve();
+/** Fee cap floor of 2 gwei: a 500k-gas call needs 0.001 AVAX in the wallet to send, but pays far less. */
+const MIN_FEE_CAP = 2_000_000_000n;
 const NONCE_CLASH = /nonce|replacement transaction|already known|underpriced/i;
 
 /**
@@ -41,8 +43,17 @@ export async function relayerWrite(w: Write): Promise<Hex> {
   const job = queue.then(async () => {
     for (let attempt = 0; ; attempt++) {
       try {
-        const nonce = await serverPublic.getTransactionCount({ address: wallet.account.address, blockTag: "pending" });
-        return await wallet.writeContract({ ...(w as Parameters<typeof wallet.writeContract>[0]), nonce });
+        const [nonce, fees] = await Promise.all([
+          serverPublic.getTransactionCount({ address: wallet.account.address, blockTag: "pending" }),
+          serverPublic.estimateFeesPerGas(),
+        ]);
+        // Avalanche's base fee can jump several times over within seconds. A fee cap of only 1.2x
+        // the current base fee (viem's default) then leaves the transaction waiting until it falls
+        // back. The cap is only a ceiling: the network charges base fee + tip, so headroom is free.
+        const maxPriorityFeePerGas = fees.maxPriorityFeePerGas;
+        const cap = fees.maxFeePerGas * 4n;
+        const maxFeePerGas = (cap > MIN_FEE_CAP ? cap : MIN_FEE_CAP) + maxPriorityFeePerGas;
+        return await wallet.writeContract({ ...w, nonce, maxFeePerGas, maxPriorityFeePerGas } as Parameters<typeof wallet.writeContract>[0]);
       } catch (e) {
         const msg = String((e as { details?: string; message?: string }).details ?? (e as Error).message);
         if (attempt >= 3 || !NONCE_CLASH.test(msg)) throw e;
