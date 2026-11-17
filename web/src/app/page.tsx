@@ -93,21 +93,48 @@ function LiveStrip() {
 
 function Faq() {
   const h = useT().home;
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggle = (i: number) =>
+    setOpen((o) => {
+      const next = new Set(o);
+      if (!next.delete(i)) next.add(i);
+      return next;
+    });
   return (
     <section>
       <h2 className="mb-6 text-3xl font-bold tracking-tight text-white">{h.faqTitle}</h2>
       <div className="divide-y divide-zinc-800 border border-zinc-800 bg-surface">
-        {h.faq.map(([q, a]) => (
-          <details key={q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white">
-              {q}
-              <span className="grid h-7 w-7 shrink-0 place-items-center border border-zinc-700 text-zinc-400 transition-transform duration-300 group-open:rotate-45 group-open:border-brand-500 group-open:text-brand-400">
-                +
-              </span>
-            </summary>
-            <p className="mt-3 animate-fade-up text-sm leading-relaxed text-zinc-400">{a}</p>
-          </details>
-        ))}
+        {h.faq.map(([q, a], i) => {
+          const isOpen = open.has(i);
+          return (
+            <div key={q}>
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                aria-controls={`faq-${i}`}
+                onClick={() => toggle(i)}
+                className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-semibold text-white transition-colors hover:bg-zinc-900/60"
+              >
+                {q}
+                <span
+                  className={`grid h-7 w-7 shrink-0 place-items-center border transition-colors duration-300 ${isOpen ? "border-brand-500 text-brand-400" : "border-zinc-700 text-zinc-400"}`}
+                >
+                  <span className={`text-base leading-none transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}>+</span>
+                </span>
+              </button>
+              {/* Animating grid rows from 0fr to 1fr slides the answer open at its natural height. */}
+              <div
+                id={`faq-${i}`}
+                role="region"
+                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              >
+                <div className="overflow-hidden">
+                  <p className="px-5 pb-4 text-sm leading-relaxed text-zinc-400">{a}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
