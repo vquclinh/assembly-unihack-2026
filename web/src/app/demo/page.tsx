@@ -295,17 +295,21 @@ export default function DemoPage() {
 
   async function finalOutcome(id: string): Promise<[bigint, bigint] | undefined> {
     try {
-      const res = await fetch(`/api/history/${id}?fresh=1`);
-      const { events } = (await res.json()) as { events: { name: string; args: Record<string, string> }[] };
       const L = await readLease(BigInt(id));
-      let tenant = 0n;
-      let landlord = 0n;
-      for (const e of events) {
-        if (e.name !== "Paid") continue;
-        if (e.args.to.toLowerCase() === L.tenant.toLowerCase()) tenant += BigInt(e.args.amount);
-        else if (e.args.to.toLowerCase() === L.landlord.toLowerCase()) landlord += BigInt(e.args.amount);
+      // Payments can take a moment to show up in the event index: retry a few times.
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const res = await fetch(`/api/history/${id}?fresh=1`);
+        const { events } = (await res.json()) as { events: { name: string; args: Record<string, string> }[] };
+        let tenant = 0n;
+        let landlord = 0n;
+        for (const e of events) {
+          if (e.name !== "Paid") continue;
+          if (e.args.to.toLowerCase() === L.tenant.toLowerCase()) tenant += BigInt(e.args.amount);
+          else if (e.args.to.toLowerCase() === L.landlord.toLowerCase()) landlord += BigInt(e.args.amount);
+        }
+        if (tenant + landlord > 0n || attempt === 3) return [tenant, landlord];
+        await sleep(2500);
       }
-      return [tenant, landlord];
     } catch {
       return undefined;
     }

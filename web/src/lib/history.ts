@@ -69,14 +69,14 @@ async function fromRoutescan(id: bigint): Promise<HistoryEvent[] | null> {
 type RawLog = { topics: Hex[]; data: Hex; blockNumber: Hex; transactionHash: Hex; logIndex: Hex };
 
 /** Fallback: walk back from the latest block in chunks until the lease's OfferCreated event. */
-async function fromRpc(id: bigint): Promise<HistoryEvent[]> {
+async function fromRpc(id: bigint, maxChunks = MAX_CHUNKS): Promise<HistoryEvent[]> {
   const latest = await serverPublic.getBlockNumber();
   const floor = BigInt(D.deployBlock ?? 0);
   const topic = pad(numberToHex(id));
   const logs: RawLog[] = [];
   const local = D.chainId === 31337;
   let to = latest;
-  for (let i = 0; i < (local ? 1 : MAX_CHUNKS) && to >= floor; i++) {
+  for (let i = 0; i < (local ? 1 : maxChunks) && to >= floor; i++) {
     const from = local ? floor : to - CHUNK + 1n > floor ? to - CHUNK + 1n : floor;
     const chunk = (await serverPublic.request({
       method: "eth_getLogs",
@@ -105,7 +105,16 @@ export async function leaseHistory(id: bigint, fresh = false): Promise<HistoryEv
   const hit = cache.get(key);
   if (!fresh && hit && Date.now() - hit.at < 6000) return hit.events;
   // Every event we index has the lease id as its first indexed field; drop anything else.
-  const events = ((await fromRoutescan(id)) ?? (await fromRpc(id))).filter((e) => e.args.id === key);
+  const indexed = await fromRoutescan(id);
+  let all: HistoryEvent[];
+  if (indexed === null) all = await fromRpc(id);
+  else {
+    // Routescan indexes a few seconds behind the chain: add the newest blocks straight from the RPC.
+    const tail = await fromRpc(id, 1).catch(() => [] as HistoryEvent[]);
+    const seen = new Set(indexed.map((e) => `${e.tx.toLowerCase()}-${e.logIndex}`));
+    all = [...indexed, ...tail.filter((e) => !seen.has(`${e.tx.toLowerCase()}-${e.logIndex}`))];
+  }
+  const events = all.filter((e) => e.args.id === key);
   events.sort((a, b) => (BigInt(a.block) === BigInt(b.block) ? a.logIndex - b.logIndex : BigInt(a.block) < BigInt(b.block) ? -1 : 1));
   cache.set(key, { at: Date.now(), events });
   if (cache.size > 500) cache.delete(cache.keys().next().value!);

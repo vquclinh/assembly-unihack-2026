@@ -98,6 +98,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       lang: body.lang === "vi" ? "vi" : "en",
     });
   } catch (e) {
+    console.error(`[ai-report] lease ${id}: ${(e as Error).message}`);
     return NextResponse.json({ error: "AiFailed", detail: (e as Error).message }, { status: 502 });
   }
 

@@ -120,8 +120,14 @@ export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "
     }),
   });
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
-  if (!res.ok) throw new Error(`AiFailed: ${json.error?.message ?? res.status}`);
-  const out = extractJson(json.choices?.[0]?.message?.content ?? "");
+  if (!res.ok || json.error) throw new Error(`OpenRouter ${res.status}: ${json.error?.message ?? "request failed"}`);
+  const content = json.choices?.[0]?.message?.content ?? "";
+  let out: Record<string, unknown>;
+  try {
+    out = extractJson(content);
+  } catch {
+    throw new Error(`${AI_MODEL} did not return valid JSON: ${content.slice(0, 120) || "(empty)"}`);
+  }
 
   const findings = Array.isArray(out.findings) ? out.findings : [];
   return {

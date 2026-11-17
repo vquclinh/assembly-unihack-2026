@@ -67,7 +67,7 @@ export function Header() {
             </Link>
           ))}
           <Link href="/me" className={cx(navCls("/me"), "hidden sm:block")}>
-            <span className="relative pr-3.5">
+            <span className="relative pr-4.5">
               {t.nav.mine}
               <Dot n={todo} />
             </span>
