@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type Address, type Hex, parseEventLogs, zeroAddress, zeroHash } from "viem";
 import { makeRuling } from "@/components/docs";
+import { DemoCursor, type DemoCursorHandle } from "@/components/DemoCursor";
 import { Icon, type IconName } from "@/components/icons";
 import { useToast } from "@/components/toast";
 import { Button, Eyebrow, Spinner, cx } from "@/components/ui";
@@ -114,6 +115,7 @@ export default function DemoPage() {
   const [run, setRun] = useState<Run>({ status: "idle", index: 0, times: {} });
   const pausedRef = useRef(false);
   const runningRef = useRef(false);
+  const cursorRef = useRef<DemoCursorHandle>(null);
 
   useEffect(() => {
     const s = loadState();
@@ -341,8 +343,12 @@ export default function DemoPage() {
       for (let i = from; i < steps.length; i++) {
         setRun((r) => ({ ...r, index: i, waitLeft: undefined }));
         while (pausedRef.current) await sleep(300);
+        const actor = ACTOR[steps[i]];
+        let release = () => {};
+        if (actor === "keeper") cursorRef.current?.hide();
+        else release = (await cursorRef.current?.press(() => document.querySelector<HTMLIFrameElement>(`iframe[data-role="${actor}"]`), steps[i], d.roles[actor], i === from ? 25000 : 6000)) ?? release;
         const started = Date.now();
-        const tx = await doStep(s, steps[i], (left) => setRun((r) => ({ ...r, waitLeft: left })));
+        const tx = await doStep(s, steps[i], (left) => setRun((r) => ({ ...r, waitLeft: left }))).finally(release);
         if (tx) hashes.push(tx);
         const took = (tx && lookupTx(tx)?.ms) || Date.now() - started;
         setRun((r) => ({ ...r, times: { ...r.times, [i]: took } }));
@@ -351,10 +357,12 @@ export default function DemoPage() {
         await sleep(steps[i] === "ghostWait" ? 300 : 2200);
         while (pausedRef.current) await sleep(300);
       }
+      cursorRef.current?.hide();
       const outcome = await finalOutcome(s.leaseId!, hashes);
       setRun((r) => ({ ...r, status: "done", index: steps.length, outcome }));
       pokeFrames();
     } catch (e) {
+      cursorRef.current?.hide();
       setRun((r) => ({ ...r, status: "error", error: errorText(t, e) }));
     } finally {
       runningRef.current = false;
@@ -394,6 +402,7 @@ export default function DemoPage() {
   return (
     // On wide screens the three panels use the whole window, not the 72rem page column.
     <div className="space-y-6 lg:relative lg:left-1/2 lg:w-[calc(100vw-3rem)] lg:max-w-[112rem] lg:-translate-x-1/2">
+      <DemoCursor ref={cursorRef} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow className="mb-3">{d.eyebrow}</Eyebrow>
@@ -618,7 +627,7 @@ export default function DemoPage() {
                     </a>
                   </div>
                 </header>
-                <iframe data-demo key={`${frameKey}-${role}`} src={src} title={d.roles[role]} className="h-[78vh] min-h-[560px] w-full bg-canvas" />
+                <iframe data-demo data-role={role} key={`${frameKey}-${role}`} src={src} title={d.roles[role]} className="h-[78vh] min-h-[560px] w-full bg-canvas" />
               </section>
             );
           })}

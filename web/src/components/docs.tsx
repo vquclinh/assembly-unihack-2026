@@ -243,7 +243,7 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
         </button>
       </div>
       {err && <p className="text-sm text-rose-300">{err}</p>}
-      <Button className="w-full" loading={uploading || busy} onClick={submit}>
+      <Button data-demo="report" className="w-full" loading={uploading || busy} onClick={submit}>
         {uploading ? t.docs.uploading : t.docs.sendReport(total)}
       </Button>
     </div>

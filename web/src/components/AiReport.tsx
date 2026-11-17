@@ -86,7 +86,7 @@ export function AiReportCard({ leaseId, contested }: { leaseId: string; conteste
           <p className="text-xs text-zinc-500">
             {a.shared} {a.privacy}
           </p>
-          <Button className="w-full" loading={stage !== "idle"} disabled={!w.active} onClick={buy}>
+          <Button data-demo="ai" className="w-full" loading={stage !== "idle"} disabled={!w.active} onClick={buy}>
             {stage === "paying" ? a.paying : stage === "working" ? a.working : a.buy}
           </Button>
         </div>

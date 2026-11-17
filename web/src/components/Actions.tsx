@@ -141,11 +141,11 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
     return (
       <div className="space-y-3">
         <p className="text-sm text-zinc-300">{a.settleIntro}</p>
-        <Button className="w-full" loading={busy === "full"} onClick={() => run("full", () => call("proposeSettlement", [id, 0n, zeroHash]), a.fullRefunded)}>
+        <Button data-demo="fullReturn" className="w-full" loading={busy === "full"} onClick={() => run("full", () => call("proposeSettlement", [id, 0n, zeroHash]), a.fullRefunded)}>
           {a.returnFull}
         </Button>
         {mode !== "deduct" ? (
-          <Button variant="secondary" className="w-full" onClick={() => setMode("deduct")}>
+          <Button data-demo="deduct" variant="secondary" className="w-full" onClick={() => setMode("deduct")}>
             {a.proposeDeduction}
           </Button>
         ) : (
@@ -232,6 +232,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
               <p className="text-sm text-zinc-300">{a.reserveBody(<Money x={L.holdAmount} />, fmtDate(L.moveInDeadline, loc))}</p>
               {needFunds(L.holdAmount)}
               <Button
+                data-demo="reserve"
                 className="w-full text-base"
                 loading={busy === "reserve"}
                 disabled={now > moveIn}
@@ -306,6 +307,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
                   )}
                   {needFunds(topUp)}
                   <Button
+                    data-demo="moveIn"
                     className="w-full text-base"
                     loading={busy === "movein"}
                     onClick={() =>
@@ -377,7 +379,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
           return (
             <>
               <p className="text-sm text-zinc-300">{a.activeTenant(Math.round(rw / 60))}</p>
-              <Button className="w-full" loading={busy === "release"} onClick={() => run("release", () => call("requestRelease", [id]), a.releaseRequested)}>
+              <Button data-demo="release" className="w-full" loading={busy === "release"} onClick={() => run("release", () => call("requestRelease", [id]), a.releaseRequested)}>
                 {a.requestRelease}
               </Button>
             </>
@@ -411,7 +413,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
                   {a.accept(fmtVnd(rest, loc))}
                 </Button>
                 {mode !== "dispute" ? (
-                  <Button variant="danger" className="w-full" onClick={() => setMode("dispute")}>
+                  <Button data-demo="dispute" variant="danger" className="w-full" onClick={() => setMode("dispute")}>
                     {a.reject}
                   </Button>
                 ) : (
@@ -474,6 +476,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
                 </div>
                 <textarea className={inputCls} rows={3} placeholder={a.rulingPlaceholder} value={rulingText} onChange={(e) => setRulingText(e.target.value)} />
                 <Button
+                  data-demo="rule"
                   className="w-full"
                   loading={busy === "resolve"}
                   disabled={!rulingText.trim()}
