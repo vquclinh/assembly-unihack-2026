@@ -293,15 +293,30 @@ export default function DemoPage() {
     }
   }
 
-  async function finalOutcome(id: string): Promise<[bigint, bigint] | undefined> {
+  async function finalOutcome(id: string, hashes: Hex[]): Promise<[bigint, bigint] | undefined> {
     try {
       const L = await readLease(BigInt(id));
+      // First choice: the Paid events in this run's own transactions, straight from the chain.
+      let tenant = 0n;
+      let landlord = 0n;
+      const receipts = await Promise.all(hashes.map((hash) => publicClient.getTransactionReceipt({ hash }).catch(() => null)));
+      for (const r of receipts) {
+        if (!r) continue;
+        const logs = r.logs.filter((l) => l.address.toLowerCase() === ESCROW.toLowerCase());
+        for (const e of parseEventLogs({ abi: escrowAbi, eventName: "Paid", logs })) {
+          const a = e.args as { id: bigint; to: Address; amount: bigint };
+          if (a.id !== BigInt(id)) continue;
+          if (a.to.toLowerCase() === L.tenant.toLowerCase()) tenant += a.amount;
+          else if (a.to.toLowerCase() === L.landlord.toLowerCase()) landlord += a.amount;
+        }
+      }
+      if (tenant + landlord > 0n) return [tenant, landlord];
       // Payments can take a moment to show up in the event index: retry a few times.
       for (let attempt = 0; attempt < 4; attempt++) {
         const res = await fetch(`/api/history/${id}?fresh=1`);
         const { events } = (await res.json()) as { events: { name: string; args: Record<string, string> }[] };
-        let tenant = 0n;
-        let landlord = 0n;
+        tenant = 0n;
+        landlord = 0n;
         for (const e of events) {
           if (e.name !== "Paid") continue;
           if (e.args.to.toLowerCase() === L.tenant.toLowerCase()) tenant += BigInt(e.args.amount);
@@ -320,6 +335,7 @@ export default function DemoPage() {
     runningRef.current = true;
     pausedRef.current = false;
     const steps = STEPS[s.scenario];
+    const hashes: Hex[] = [];
     setRun((r) => ({ ...r, status: "playing", index: from, error: undefined }));
     try {
       for (let i = from; i < steps.length; i++) {
@@ -327,6 +343,7 @@ export default function DemoPage() {
         while (pausedRef.current) await sleep(300);
         const started = Date.now();
         const tx = await doStep(s, steps[i], (left) => setRun((r) => ({ ...r, waitLeft: left })));
+        if (tx) hashes.push(tx);
         const took = (tx && lookupTx(tx)?.ms) || Date.now() - started;
         setRun((r) => ({ ...r, times: { ...r.times, [i]: took } }));
         pokeFrames();
@@ -334,7 +351,7 @@ export default function DemoPage() {
         await sleep(steps[i] === "ghostWait" ? 300 : 2200);
         while (pausedRef.current) await sleep(300);
       }
-      const outcome = await finalOutcome(s.leaseId!);
+      const outcome = await finalOutcome(s.leaseId!, hashes);
       setRun((r) => ({ ...r, status: "done", index: steps.length, outcome }));
       pokeFrames();
     } catch (e) {
