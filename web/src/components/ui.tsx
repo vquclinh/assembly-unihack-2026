@@ -27,7 +27,7 @@ export function Button({
   return (
     <button
       className={cx(
-        "inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold tracking-tight transition-colors disabled:cursor-not-allowed",
+        "inline-flex min-h-11 select-none items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold tracking-tight transition-[background-color,border-color,color,transform,opacity] duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100",
         VARIANT[variant],
         className,
       )}
@@ -44,7 +44,11 @@ export function ButtonLink({ href, variant = "primary", className, children }: {
   return (
     <Link
       href={href}
-      className={cx("inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold tracking-tight transition-colors", VARIANT[variant], className)}
+      className={cx(
+        "inline-flex min-h-11 select-none items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold tracking-tight transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97]",
+        VARIANT[variant],
+        className,
+      )}
     >
       {children}
     </Link>
@@ -55,8 +59,29 @@ export function Spinner({ className }: { className?: string }) {
   return <span className={cx("inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent", className)} />;
 }
 
-export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <section className={cx("border border-zinc-800 bg-surface p-5", className)}>{children}</section>;
+export function Card({ className, children, ...rest }: { className?: string; children: ReactNode } & Omit<ComponentProps<"section">, "className" | "children">) {
+  return (
+    <section {...rest} className={cx("border border-zinc-800 bg-surface p-5 transition-colors duration-300", className)}>
+      {children}
+    </section>
+  );
+}
+
+/** Grey placeholder with a moving sheen, shown while data loads. */
+export function Skeleton({ className }: { className?: string }) {
+  return <span aria-hidden className={cx("skeleton block", className)} />;
+}
+
+/** A card-shaped loading state for whole sections. */
+export function CardSkeleton({ lines = 3, className }: { lines?: number; className?: string }) {
+  return (
+    <div className={cx("space-y-3 border border-zinc-800 bg-surface p-5", className)} aria-busy>
+      <Skeleton className="h-5 w-1/3" />
+      {Array.from({ length: lines }, (_, i) => (
+        <Skeleton key={i} className={cx("h-3.5", i % 3 === 2 ? "w-2/3" : "w-full")} />
+      ))}
+    </div>
+  );
 }
 
 const TONE = {

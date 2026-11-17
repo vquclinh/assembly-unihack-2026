@@ -45,9 +45,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const existing = await getRecord<AiReport>("ai-reports", c.rid);
   if (existing) return NextResponse.json({ report: existing });
   if (!aiConfigured()) return NextResponse.json({ error: "AiNotConfigured" }, { status: 503 });
-  const r = await requirements(new URL(req.url).toString(), `AI damage assessment for Coc lease #${id}`);
+  const url = new URL(req.url);
+  const r = await requirements(url.origin + url.pathname, `AI damage assessment for Coc lease #${id}`);
   if (!r) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
-  return NextResponse.json(paymentRequiredBody(r), { status: 402 });
+  // Plain GET answers 402 as x402 clients expect. Our own UI polls with ?quote=1 and gets the
+  // same body with 200, so the browser console does not fill with "402" errors.
+  return NextResponse.json(paymentRequiredBody(r), { status: url.searchParams.get("quote") === "1" ? 200 : 402 });
 }
 
 /** Pays with X-PAYMENT, runs the assessment, settles the USDC on Avalanche, stores the report. */
@@ -63,7 +66,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "WrongStatus" }, { status: 409 });
   }
 
-  const r = await requirements(new URL(req.url).toString(), `AI damage assessment for Coc lease #${id}`);
+  const url = new URL(req.url);
+  const r = await requirements(url.origin + url.pathname, `AI damage assessment for Coc lease #${id}`);
   if (!r) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
 
   let payment;

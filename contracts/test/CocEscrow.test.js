@@ -327,6 +327,47 @@ describe("CocEscrow", function () {
     });
   });
 
+  describe("per-lease windows", function () {
+    async function offerWith(response, mediation) {
+      const now = await time.latest();
+      await escrow.connect(landlord).createOfferWithWindows(
+        ethers.ZeroAddress, mediator.address, HOLD, DEPOSIT, now + 600, now + 3600, false, hash("terms"), response, mediation
+      );
+      return escrow.leaseCount();
+    }
+
+    it("stores the chosen windows and uses the deployment defaults otherwise", async function () {
+      const a = await offerWith(60, 90);
+      const L = await escrow.getLease(a);
+      expect(L.responseWindow).to.equal(60);
+      expect(L.mediationTimeout).to.equal(90);
+      const b = (await offer()).id;
+      const D = await escrow.getLease(b);
+      expect(D.responseWindow).to.equal(RESPONSE);
+      expect(D.mediationTimeout).to.equal(MEDIATION);
+    });
+
+    it("rejects windows outside 30 seconds to 60 days", async function () {
+      const now = await time.latest();
+      const call = (r, m) =>
+        escrow.connect(landlord).createOfferWithWindows(ethers.ZeroAddress, mediator.address, HOLD, DEPOSIT, now + 600, now + 3600, false, hash("t"), r, m);
+      await expect(call(29, 60)).to.be.revertedWithCustomError(escrow, "BadParams");
+      await expect(call(60, 29)).to.be.revertedWithCustomError(escrow, "BadParams");
+      await expect(call(61 * 86400, 60)).to.be.revertedWithCustomError(escrow, "BadParams");
+    });
+
+    it("a short demo lease settles on its own windows, not the long defaults", async function () {
+      const id = await offerWith(60, 90);
+      await escrow.connect(tenant).reserve(id);
+      await escrow.connect(landlord).proposeCondition(id, hash("p"));
+      await escrow.connect(tenant).confirmMoveIn(id, hash("p"), false);
+      await escrow.connect(tenant).requestRelease(id);
+      await expect(escrow.finalize(id)).to.be.revertedWithCustomError(escrow, "TooEarly");
+      await time.increase(61);
+      await expect(escrow.connect(stranger).finalize(id)).to.changeTokenBalances(token, [tenant], [DEPOSIT]);
+    });
+  });
+
   describe("safety", function () {
     it("a blocked recipient cannot freeze the lease: funds become withdrawable credit", async function () {
       const o = await active();

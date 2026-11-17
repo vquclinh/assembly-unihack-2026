@@ -160,6 +160,10 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 | **AI damage report** | A vision model compares move-in photos with move-out evidence and suggests a split. The mediator pays per report over x402. The contract never accepts the AI's answer, only the mediator's ruling. |
 | **Agreement and reminders** | A printable A4 agreement in English and Vietnamese with the on-chain fingerprint and a QR code, and calendar reminders before every deadline. |
 | **Live statistics** | Money locked now, total secured, amicable rate and rulings, read directly from the contract. |
+| **Transparency page** | Every contract with its verified source, and a live check that the money held covers every open deposit. |
+| **Needs your action** | One list of every lease waiting on you, with a countdown to the moment the contract decides without you. |
+| **One-tap reserve** | A student with no wallet presses one button; Coc creates the wallet, adds test USDC and locks the holding deposit. |
+| **Before/after photos** | A slider over one image compares the move-in photo with the move-out evidence. |
 
 ---
 
@@ -177,6 +181,8 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
    ├─ /api/ai-report  AI damage report behind an x402 paywall (HTTP 402)
    ├─ /api/keeper     calls finalize once a deadline has passed
    ├─ /api/rooms, /api/stats, /api/reports   listings, live numbers, signed reports
+   ├─ /api/history    full event history of a lease
+   ├─ /api/transparency  verification status and live solvency
    └─ /api/faucet     test USDC for the demo
               │
               ▼
@@ -201,7 +207,9 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 - **Sybil-resistant reputation.** Only leases that reached move-in count, and each is weighted by deposit size multiplied by time held ("USDC-days"). Faking a good record means locking real money for a long time.
 - **Optional yield.** If both sides opt in, the deposit sits in an ERC-4626 vault and yield is split 50/50. If the vault loses value, payouts are computed on what remains and the lease still closes. The MVP uses a simulated vault.
 - **Machine payments with x402.** The AI report endpoint answers HTTP 402 with payment requirements. The mediator signs an EIP-3009 authorisation for 0.10 USDC to the server, which verifies it, runs the model, then settles the payment on Avalanche and returns the receipt in the `X-PAYMENT-RESPONSE` header. No account, subscription or API key is needed on the buyer's side.
-- **Deadlines that enforce themselves.** A keeper calls `finalize` as soon as a deadline passes: the lease page triggers it, a daily cron sweeps all leases, and anyone else may call it too.
+- **Deadlines that enforce themselves.** A keeper calls `finalize` as soon as a deadline passes: the lease page triggers it, GitHub Actions sweeps every 5 minutes, a daily cron backs it up, and anyone else may call it too.
+- **Deadlines per lease.** Each offer stores its own response and mediation windows (30 seconds to 60 days), so the same contract serves a 12-month lease with 3-day windows and a 2-minute demo.
+- **A relayer that does not trip over itself.** Relayer transactions are queued so two never take the same nonce, and the relay, faucet and uploads are rate-limited per IP. See SECURITY.md for the full threat model.
 - **Token-agnostic.** The contract works with any EIP-3009 token, so it can switch to whatever regulated asset Vietnamese law permits.
 
 ### 7.4 Why blockchain, and why Avalanche
@@ -256,22 +264,15 @@ A neutral escrow needs a holder that **neither side controls and that cannot cha
 
 ## 11. Current status
 
-The MVP is complete and deployed on the Avalanche Fuji testnet:
-
-| Contract | Address |
-|---|---|
-| CocEscrow | `0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3` |
-| CocForwarder | `0xa147258E8C60fb29599F088aCCc74B97981865a8` |
-| MockUSDC (test token) | `0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87` |
-| DemoYieldVault | `0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6` |
-| CocBadge | `0x8C5EA878bE96ADA142349283a50fc3AEF3e63551` |
+The MVP is complete and runs on the Avalanche Fuji testnet. Contract v2 (per-lease deadlines) is deployed with the scripts in `contracts/`; the app's Transparency page lists the live addresses with their Sourcify verification.
 
 Delivered so far:
 
-- Escrow and badge contracts with all flows above and 34 passing tests.
+- Escrow and badge contracts with all flows above and 37 passing tests, a gas report and CI on every push.
 - Gasless relayer, in-browser quick wallets and Core/MetaMask support.
 - Web app with deposit links and QR codes, photo condition reports, deduction and dispute flows, mediator ruling, on-chain receipts and public reputation pages.
-- A one-click judge demo with landlord, tenant and mediator side by side.
+- A judge demo that plays three stories on its own (happy ending, dispute with AI, landlord ghosts), or lets judges click every step, with landlord, tenant and mediator side by side.
+- A Transparency page with a live solvency check, the full on-chain history of every lease, a "needs your action" inbox, one-tap reserve, wallet backup and restore, and an installable mobile app (PWA).
 - AI damage reports paid over x402, the trusted landlord badge, a room finder with signed scam reports, live statistics, an automatic keeper, and a printable bilingual agreement with calendar reminders.
 - English and Vietnamese interface.
 

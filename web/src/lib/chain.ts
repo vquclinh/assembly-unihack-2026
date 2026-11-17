@@ -1,6 +1,6 @@
 import "server-only";
 import type { Address } from "viem";
-import { D, ESCROW, escrowAbi, isDeployed } from "./config";
+import { ESCROW, escrowAbi, isDeployed } from "./config";
 import { type Lease, type Stats, Status, toStats } from "./lease";
 import { serverPublic } from "./server";
 
@@ -44,5 +44,3 @@ export async function readLandlordStats(addresses: Address[]) {
 }
 
 export const OPEN_STATUSES: number[] = [Status.Reserved, Status.Active, Status.ReleaseRequested, Status.SettlementProposed, Status.NoShowClaimed, Status.Disputed];
-
-export const windows = { responseWindow: D.responseWindow, mediationTimeout: D.mediationTimeout };

@@ -11,6 +11,8 @@ export type Deployment = {
   vault: string;
   forwarder: string;
   escrow: string;
+  /** Block of the escrow deployment, where history scans start. */
+  deployBlock?: number;
   badge?: string;
   badgeMinCompleted?: number;
   responseWindow: number;

@@ -1,27 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type Address, type Hex, formatUnits, toHex } from "viem";
-import { chainNow } from "@/lib/client";
-import { chain, explorerTx } from "@/lib/config";
+import { type Hex, formatUnits } from "viem";
+import { explorerTx } from "@/lib/config";
 import { AppError, errorText } from "@/lib/errors";
 import { fmtUsdc, shortAddr } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import type { AiReport } from "@/lib/lease";
+import { type Requirements, aiQuote, buyAiReport } from "@/lib/aiPay";
 import { useWallet } from "@/lib/wallet";
 import { Icon } from "./icons";
 import { useToast } from "./toast";
 import { Badge, Button, Card, cx } from "./ui";
-
-type Requirements = {
-  scheme: string;
-  network: string;
-  maxAmountRequired: string;
-  payTo: Address;
-  asset: Address;
-  maxTimeoutSeconds: number;
-  extra: { name: string; version: string };
-};
 
 const SEVERITY_TONE = { none: "good", minor: "warn", moderate: "warn", major: "bad" } as const;
 
@@ -36,19 +26,26 @@ export function AiReportCard({ leaseId, contested }: { leaseId: string; conteste
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const [stage, setStage] = useState<"idle" | "paying" | "working">("idle");
 
+  // Keeps checking until a report exists, so it appears for every party as soon as anyone buys it.
   useEffect(() => {
     let alive = true;
-    fetch(`/api/ai-report/${leaseId}`)
-      .then(async (res) => {
-        const json = await res.json();
+    let timer: ReturnType<typeof setTimeout>;
+    const check = async () => {
+      try {
+        const q = await aiQuote(leaseId);
         if (!alive) return;
-        if (res.ok && json.report) setReport(json.report);
-        else if (res.status === 402) setReq(json.accepts?.[0] ?? null);
-        else setUnavailable(json.error ?? "Unknown");
-      })
-      .catch(() => alive && setUnavailable("Unknown"));
+        if (q.report) return setReport(q.report);
+        if (q.req) setReq(q.req);
+        else setUnavailable(q.error ?? "Unknown");
+      } catch {
+        if (alive) setUnavailable("Unknown");
+      }
+      timer = setTimeout(check, 7000);
+    };
+    check();
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
   }, [leaseId]);
 
@@ -56,36 +53,9 @@ export function AiReportCard({ leaseId, contested }: { leaseId: string; conteste
     if (!w.active || !req) return;
     setStage("paying");
     try {
-      // x402 "exact" payment: an EIP-3009 authorization for exactly the quoted amount to the service.
-      const nonce = toHex(crypto.getRandomValues(new Uint8Array(32)));
-      const validBefore = BigInt((await chainNow()) + req.maxTimeoutSeconds);
-      const authorization = { from: w.active.address, to: req.payTo, value: req.maxAmountRequired, validAfter: "0", validBefore: validBefore.toString(), nonce };
-      const signature = await w.signTypedData({
-        domain: { name: req.extra.name, version: req.extra.version, chainId: chain.id, verifyingContract: req.asset },
-        types: {
-          ReceiveWithAuthorization: [
-            { name: "from", type: "address" },
-            { name: "to", type: "address" },
-            { name: "value", type: "uint256" },
-            { name: "validAfter", type: "uint256" },
-            { name: "validBefore", type: "uint256" },
-            { name: "nonce", type: "bytes32" },
-          ],
-        },
-        primaryType: "ReceiveWithAuthorization",
-        message: { ...authorization, value: BigInt(req.maxAmountRequired), validAfter: 0n, validBefore },
-      });
-      const header = btoa(JSON.stringify({ x402Version: 1, scheme: req.scheme, network: req.network, payload: { signature, authorization } }));
-      setStage("working");
-      const res = await fetch(`/api/ai-report/${leaseId}`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-payment": header },
-        body: JSON.stringify({ lang }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.report) throw new AppError(json.error || "Unknown", json.detail);
-      setReport(json.report);
-      toast({ tone: "good", text: a.bought, tx: json.report.payment.tx });
+      const report = await buyAiReport({ address: w.active.address, signTypedData: w.signTypedData }, leaseId, req, lang, () => setStage("working"));
+      setReport(report);
+      toast({ tone: "good", text: a.bought, tx: report.payment.tx });
     } catch (e) {
       toast({ tone: "bad", text: errorText(t, e) });
     } finally {
@@ -125,18 +95,18 @@ export function AiReportCard({ leaseId, contested }: { leaseId: string; conteste
       {report && (
         <div className="space-y-4">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">{a.summary}</p>
+            <p className="font-mono text-xs uppercase tracking-wider text-zinc-500">{a.summary}</p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-100">{report.summary}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-px border border-zinc-800 bg-zinc-800">
             <div className="bg-canvas p-3">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{a.suggestion}</p>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">{a.suggestion}</p>
               <p className="mt-1 text-2xl font-extrabold text-white">{report.suggestedDeductionPct}%</p>
               <p className="font-mono text-xs text-zinc-400">≈ {fmtUsdc((contested * BigInt(report.suggestedDeductionPct)) / 100n, t.locale)}</p>
             </div>
             <div className="bg-canvas p-3">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{a.confidence}</p>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">{a.confidence}</p>
               <p className="mt-1 text-2xl font-extrabold text-white">{a.confidences[report.confidence]}</p>
               <p className="truncate font-mono text-xs text-zinc-400">
                 {a.model}: {report.model}
@@ -146,7 +116,7 @@ export function AiReportCard({ leaseId, contested }: { leaseId: string; conteste
 
           {report.findings.length > 0 && (
             <div>
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-zinc-500">{a.findings}</p>
+              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-zinc-500">{a.findings}</p>
               <ul className="divide-y divide-zinc-800 border border-zinc-800">
                 {report.findings.map((f, i) => (
                   <li key={i} className="space-y-1 p-3 text-sm">
@@ -172,7 +142,7 @@ export function AiReportCard({ leaseId, contested }: { leaseId: string; conteste
             </p>
           )}
           <p className={cx("border-l-2 border-amber-400 bg-amber-500/10 px-3 py-2 text-xs text-amber-200")}>{a.advice}</p>
-          <p className="font-mono text-[11px] text-zinc-500">
+          <p className="font-mono text-xs text-zinc-500">
             {a.receipt}: {fmtUsdc(BigInt(report.payment.amount), t.locale)} · {a.paidBy} {shortAddr(report.payment.payer)} ·{" "}
             {explorerTx(report.payment.tx) ? (
               <a className="text-brand-400 hover:underline" href={explorerTx(report.payment.tx)} target="_blank" rel="noreferrer">

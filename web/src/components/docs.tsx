@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { type Hex, zeroHash } from "viem";
 import { fetchJson, fileUrl, uploadJson, uploadPhoto } from "@/lib/files";
 import { errorText } from "@/lib/errors";
+import { sampleFile } from "@/lib/samples";
 import { useT } from "@/lib/i18n";
 import { type ConditionReport, type Evidence, type ReportItem, type Ruling, type Terms } from "@/lib/lease";
 import { Badge, Button, cx, inputCls } from "./ui";
@@ -94,7 +95,7 @@ export function ReportView({ hash, title }: { hash: Hex; title?: string }) {
           ))}
         </ul>
       )}
-      <p className="mt-3 break-all font-mono text-[11px] text-zinc-500">hash {hash}</p>
+      <p className="mt-3 break-all font-mono text-xs text-zinc-500">hash {hash}</p>
     </div>
   );
 }
@@ -174,11 +175,6 @@ function PhotoPicker({ files, onChange }: { files: File[]; onChange: (f: File[])
 }
 
 /** Loads one of the bundled sample photos (public/demo) as a File, for the judge demo. */
-async function sampleFile(name: string) {
-  const res = await fetch(`/demo/${name}`);
-  return new File([await res.blob()], name, { type: "image/jpeg" });
-}
-
 async function uploadAll(files: File[]) {
   const out: Hex[] = [];
   for (const f of files) out.push(await uploadPhoto(f));
@@ -325,5 +321,77 @@ function SampleButton({ onClick }: { onClick: () => void }) {
       <Icon name="camera" className="h-4 w-4" />
       {t.docs.samplePhotos}
     </button>
+  );
+}
+
+/**
+ * Before/after slider: a move-in photo under a move-out photo, revealed by dragging. Makes a
+ * "new stain" claim easy to check by eye, for both sides and the mediator.
+ */
+export function PhotoCompare({ condition, evidence }: { condition: Hex; evidence: Hex[] }) {
+  const t = useT();
+  const report = useDoc<ConditionReport>(condition);
+  const ev0 = useDoc<Evidence>(evidence[0]);
+  const ev1 = useDoc<Evidence>(evidence[1]);
+  const before = report.doc?.items.flatMap((it) => it.photos.map((p) => ({ p, label: it.label }))) ?? [];
+  const after = [...(ev0.doc?.photos ?? []).map((p) => ({ p, label: t.compare.landlord })), ...(ev1.doc?.photos ?? []).map((p) => ({ p, label: t.compare.tenant }))];
+  const [b, setB] = useState(0);
+  const [a, setA] = useState(0);
+  const [pos, setPos] = useState(50);
+  if (!before.length || !after.length) return null;
+  const bi = Math.min(b, before.length - 1);
+  const ai = Math.min(a, after.length - 1);
+  const thumbs = (list: { p: Hex; label: string }[], sel: number, set: (i: number) => void) => (
+    <div className="flex gap-1.5 overflow-x-auto pb-1">
+      {list.map((x, i) => (
+        <button
+          key={`${x.p}-${i}`}
+          type="button"
+          onClick={() => set(i)}
+          title={x.label}
+          className={cx("h-12 w-12 shrink-0 overflow-hidden border-2 transition-all", i === sel ? "border-brand-500" : "border-transparent opacity-60 hover:opacity-100")}
+        >
+          <img src={fileUrl(x.p)} alt="" className="h-full w-full object-cover" />
+        </button>
+      ))}
+    </div>
+  );
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="font-bold">{t.compare.title}</h2>
+        <p className="text-sm text-zinc-400">{t.compare.lead}</p>
+      </div>
+      <div className="relative aspect-[4/3] w-full select-none overflow-hidden bg-zinc-900">
+        <img src={fileUrl(after[ai].p)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+          <img src={fileUrl(before[bi].p)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.3)]" style={{ left: `${pos}%` }}>
+          <span className="absolute top-1/2 left-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-xs font-bold text-zinc-900 shadow">⇆</span>
+        </div>
+        <span className="absolute left-2 top-2 bg-black/70 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-white">{t.compare.before}</span>
+        <span className="absolute right-2 top-2 bg-brand-500 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider text-white">{t.compare.after}</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={pos}
+          onChange={(e) => setPos(Number(e.target.value))}
+          aria-label={t.compare.title}
+          className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <p className="mb-1 text-xs text-zinc-400">{t.compare.before}: {before[bi].label}</p>
+          {thumbs(before, bi, setB)}
+        </div>
+        <div>
+          <p className="mb-1 text-xs text-zinc-400">{t.compare.after}: {after[ai].label}</p>
+          {thumbs(after, ai, setA)}
+        </div>
+      </div>
+    </div>
   );
 }

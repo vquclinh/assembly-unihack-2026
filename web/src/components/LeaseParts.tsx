@@ -6,14 +6,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type Address, zeroAddress } from "viem";
 import { type CalendarEvent, buildIcs, downloadIcs } from "@/lib/calendar";
-import { publicClient } from "@/lib/client";
-import { D, ESCROW, escrowAbi, explorerTx } from "@/lib/config";
-import { fmtDuration, fmtUsdc, fmtVnd, shortAddr } from "@/lib/format";
+import { D, explorerTx } from "@/lib/config";
+import { fmtDate, fmtDuration, fmtUsdc, fmtVnd, shortAddr } from "@/lib/format";
+import { usePoll } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import { Status, finalizeDueAt, stepIndex, type Lease } from "@/lib/lease";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
 import { ReputationBadge } from "./Reputation";
-import { Card, Row, cx } from "./ui";
+import { Card, CardSkeleton, Row, cx } from "./ui";
 import { useToast } from "./toast";
 
 export function Stepper({ status }: { status: number }) {
@@ -30,7 +30,7 @@ export function Stepper({ status }: { status: number }) {
               cancelled ? "bg-zinc-700" : i < cur || (i === cur && cur === 4) ? "bg-brand-500" : i === cur ? "bg-brand-400" : "bg-zinc-800",
             )}
           />
-          <span className={cx("text-[11px] sm:text-xs", i === cur ? "font-semibold text-zinc-50" : "text-zinc-400")}>{s}</span>
+          <span className={cx("text-xs sm:text-xs", i === cur ? "font-semibold text-zinc-50" : "text-zinc-400")}>{s}</span>
         </li>
       ))}
     </ol>
@@ -166,59 +166,129 @@ export function ShareCard({ id }: { id: string }) {
   );
 }
 
-type PaidEvent = { to: Address; amount: bigint; tx: string };
+type HistoryEvent = { name: string; args: Record<string, string | boolean>; block: string; time: number | null; tx: string; logIndex: number };
 
-/** On-chain receipt: every payment this lease made, read from the contract's events. */
+const EVENT_ICON: Record<string, IconName> = {
+  OfferCreated: "link",
+  OfferWindows: "clock",
+  OfferCancelled: "xCircle",
+  Reserved: "lock",
+  ConditionProposed: "camera",
+  MovedIn: "home",
+  ReservationCancelled: "xCircle",
+  NoShowClaimed: "alert",
+  ReleaseRequested: "logOut",
+  SettlementProposed: "fileText",
+  Disputed: "scale",
+  Resolved: "scale",
+  YieldPaid: "sparkles",
+  Closed: "check",
+  Paid: "wallet",
+};
+
+/**
+ * The lease's full on-chain history, from the offer to the last payment, with a link to
+ * every transaction. It doubles as the receipt: the "Paid" rows are the money that moved.
+ */
 export function Receipt({ id, L, status }: { id: bigint; L: Lease; status: number }) {
   const t = useT();
-  const [paid, setPaid] = useState<PaidEvent[] | null>(null);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const latest = await publicClient.getBlockNumber();
-        const fromBlock = latest > 2000n ? latest - 2000n : 0n;
-        const logs = await publicClient.getContractEvents({ address: ESCROW, abi: escrowAbi, eventName: "Paid", args: { id }, fromBlock });
-        if (!alive) return;
-        setPaid(
-          logs.map((l) => {
-            const a = (l as unknown as { args: { to: Address; amount: bigint } }).args;
-            return { to: a.to, amount: a.amount, tx: l.transactionHash as string };
-          }),
-        );
-      } catch {
-        if (alive) setPaid([]);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [id, status]);
+  const h = t.history;
+  const open = status !== Status.Closed && status !== Status.Cancelled;
+  const { data } = usePoll<HistoryEvent[] | null>(
+    async () => {
+      const res = await fetch(`/api/history/${id}`);
+      if (!res.ok) return null;
+      return ((await res.json()) as { events: HistoryEvent[] }).events;
+    },
+    [id.toString(), status],
+    open ? 10000 : 60000,
+  );
+  const [all, setAll] = useState(false);
 
-  if (!paid || paid.length === 0) return null;
-  const who = (a: Address) =>
-    a.toLowerCase() === L.tenant.toLowerCase() ? t.parties.tenant : a.toLowerCase() === L.landlord.toLowerCase() ? t.parties.landlord : shortAddr(a);
+  const who = (a?: string | boolean) => {
+    const x = String(a ?? "").toLowerCase();
+    return x === L.tenant.toLowerCase() ? t.parties.tenant : x === L.landlord.toLowerCase() ? t.parties.landlord : x === L.mediator.toLowerCase() ? t.parties.mediator : shortAddr(String(a));
+  };
+  const money = (x?: string | boolean) => fmtUsdc(BigInt(String(x ?? "0")), t.locale);
+  const line = (e: HistoryEvent): string => {
+    const a = e.args;
+    switch (e.name) {
+      case "OfferCreated":
+        return h.offerCreated(money(a.holdAmount), money(a.depositAmount));
+      case "OfferWindows":
+        return h.windows(fmtDuration(Number(a.responseWindow), t), fmtDuration(Number(a.mediationTimeout), t));
+      case "Reserved":
+        return h.reserved(money(a.amount));
+      case "MovedIn":
+        return h.movedIn(money(a.deposit), a.yieldOn === true);
+      case "SettlementProposed":
+        return BigInt(String(a.deduction)) === 0n ? h.fullReturn : h.deduction(money(a.deduction));
+      case "Disputed":
+        return h.disputed(money(a.disputedAmount));
+      case "Resolved":
+        return h.resolved(money(a.toTenant), money(a.toLandlord));
+      case "ReservationCancelled":
+        return h.reservationCancelled(money(a.toTenant), money(a.toLandlord));
+      case "YieldPaid":
+        return h.yieldPaid(money(a.toTenant), money(a.toLandlord));
+      case "Closed":
+        return h.closed(money(a.toTenant), money(a.toLandlord));
+      case "Paid":
+        return h.paid(money(a.amount), who(a.to));
+      default:
+        return h.names[e.name] ?? e.name;
+    }
+  };
+
+  if (!data) return <CardSkeleton lines={3} />;
+  if (data.length === 0) return null;
+  const shown = all ? data : data.slice(-6);
+  const paid = data.filter((e) => e.name === "Paid");
+
   return (
     <Card>
-      <h2 className="mb-1 font-bold">{t.receipt.title}</h2>
-      <ul className="divide-y divide-zinc-800 text-sm">
-        {paid.map((p, i) => (
-          <li key={i} className="flex items-center justify-between gap-3 py-2">
-            <span>
-              {t.receipt.paidTo} <b>{who(p.to)}</b>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-bold">{h.title}</h2>
+        <span className="font-mono text-xs text-zinc-500">{h.count(data.length)}</span>
+      </div>
+      {paid.length > 0 && (
+        <div className="mb-4 space-y-1 border border-emerald-500/30 bg-emerald-500/5 p-3">
+          <p className="font-mono text-xs font-bold uppercase tracking-widest text-emerald-400">{t.receipt.title}</p>
+          {paid.map((p) => (
+            <p key={`${p.tx}-${p.logIndex}`} className="flex justify-between gap-3 text-sm">
+              <span>
+                {t.receipt.paidTo} <b>{who(p.args.to)}</b>
+              </span>
+              <b>{money(p.args.amount)}</b>
+            </p>
+          ))}
+        </div>
+      )}
+      {data.length > shown.length && (
+        <button onClick={() => setAll(true)} className="mb-2 text-xs font-semibold text-brand-400 hover:text-brand-300">
+          {h.showAll(data.length)}
+        </button>
+      )}
+      <ol className="relative space-y-3 border-l border-zinc-800 pl-5">
+        {shown.map((e) => (
+          <li key={`${e.tx}-${e.logIndex}`} className="relative animate-fade-up">
+            <span className="absolute -left-[31px] top-0 grid h-5 w-5 place-items-center border border-zinc-700 bg-canvas text-brand-400">
+              <Icon name={EVENT_ICON[e.name] ?? "check"} className="h-3 w-3" />
             </span>
-            <span className="text-right">
-              <b>{fmtUsdc(p.amount, t.locale)}</b>
-              {explorerTx(p.tx) && (
-                <a className="ml-2 text-xs text-zinc-400 underline" href={explorerTx(p.tx)} target="_blank" rel="noreferrer">
+            <p className="text-sm font-medium text-zinc-100">{line(e)}</p>
+            <p className="mt-0.5 flex flex-wrap gap-x-2 font-mono text-xs text-zinc-500">
+              {e.time && <span>{fmtDate(e.time, t.locale)}</span>}
+              <span>#{e.block}</span>
+              {explorerTx(e.tx) && (
+                <a className="text-zinc-400 underline hover:text-white" href={explorerTx(e.tx)} target="_blank" rel="noreferrer">
                   {t.common.tx}
                 </a>
               )}
-            </span>
+            </p>
           </li>
         ))}
-      </ul>
-      <p className="mt-2 text-xs text-zinc-400">{t.receipt.note(D.network)}</p>
+      </ol>
+      <p className="mt-3 text-xs text-zinc-500">{t.receipt.note(D.network)}</p>
     </Card>
   );
 }
@@ -226,7 +296,7 @@ export function Receipt({ id, L, status }: { id: bigint; L: Lease; status: numbe
 /** Upcoming deadlines of a lease, as calendar events. */
 export function leaseEvents(id: string, L: Lease, now: number, t: ReturnType<typeof useT>): CalendarEvent[] {
   const ev: CalendarEvent[] = [];
-  const due = finalizeDueAt(L, D.responseWindow, D.mediationTimeout);
+  const due = finalizeDueAt(L);
   if (L.status === Status.Offered || L.status === Status.Reserved) {
     ev.push({ uid: `${D.chainId}-${id}-movein`, at: Number(L.moveInDeadline), title: t.tools.evMoveIn(id), description: t.tools.evMoveInDesc });
   }
@@ -266,7 +336,7 @@ export function LeaseToolsCard({ id, L, now }: { id: string; L: Lease; now: numb
             <span className="min-w-0">
               <span className="block text-sm font-semibold text-white">{t.tools.calendar}</span>
               <span className="block text-xs text-zinc-400">{t.tools.calendarHint}</span>
-              <span className="mt-1.5 block space-y-0.5 font-mono text-[11px] text-zinc-500">
+              <span className="mt-1.5 block space-y-0.5 font-mono text-xs text-zinc-500">
                 {events.map((e) => (
                   <span key={e.uid} className="block truncate">
                     {new Date(e.at * 1000).toLocaleString(t.locale, { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })} · {e.title.replace(/^C[oọ]c #\d+: /, "")}

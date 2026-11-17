@@ -1,7 +1,7 @@
 import "server-only";
 import { readFileSync } from "fs";
 import path from "path";
-import { type Hex, createPublicClient, createWalletClient, decodeErrorResult, http } from "viem";
+import { type Abi, type Address, type Hex, createPublicClient, createWalletClient, decodeErrorResult, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { allErrorsAbi, chain } from "./config";
 
@@ -22,6 +22,49 @@ export function relayerWallet() {
   if (!pk) return null;
   const account = privateKeyToAccount((pk.startsWith("0x") ? pk : `0x${pk}`) as Hex);
   return createWalletClient({ account, chain, transport: http(process.env.RPC_URL || undefined, { retryCount: 4 }) });
+}
+
+type Write = { address: Address; abi: Abi; functionName: string; args: readonly unknown[]; gas?: bigint };
+
+/** Submissions from this server instance go out one at a time, so two never pick the same nonce. */
+let queue: Promise<unknown> = Promise.resolve();
+const NONCE_CLASH = /nonce|replacement transaction|already known|underpriced/i;
+
+/**
+ * Sends a transaction from the relayer wallet (relay, faucet, keeper, x402 settlement all
+ * share it). Calls are serialized and the nonce is read from the pending pool each time; if
+ * another instance took the same nonce, it waits a moment and tries again.
+ */
+export async function relayerWrite(w: Write): Promise<Hex> {
+  const wallet = relayerWallet();
+  if (!wallet) throw new Error("NoRelayer");
+  const job = queue.then(async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const nonce = await serverPublic.getTransactionCount({ address: wallet.account.address, blockTag: "pending" });
+        return await wallet.writeContract({ ...(w as Parameters<typeof wallet.writeContract>[0]), nonce });
+      } catch (e) {
+        const msg = String((e as { details?: string; message?: string }).details ?? (e as Error).message);
+        if (attempt >= 3 || !NONCE_CLASH.test(msg)) throw e;
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1) + Math.random() * 250));
+      }
+    }
+  });
+  queue = job.catch(() => {});
+  return job;
+}
+
+/** Sends through the relayer and waits for the block, timing how long Avalanche took to finalize it. */
+export async function relayerWriteAndWait(w: Write) {
+  const started = Date.now();
+  const hash = await relayerWrite(w);
+  const receipt = await serverPublic.waitForTransactionReceipt({ hash, pollingInterval: 250 });
+  return {
+    hash,
+    receipt,
+    ms: Date.now() - started,
+    fee: (receipt.gasUsed * receipt.effectiveGasPrice).toString(),
+  };
 }
 
 /** Digs the revert data out of a viem error and decodes it against all our ABIs. */

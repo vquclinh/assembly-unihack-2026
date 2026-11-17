@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { type Address, type Hex, zeroAddress, zeroHash } from "viem";
-import { D } from "@/lib/config";
-import { errorText } from "@/lib/errors";
-import { fmtDate, fmtUsdc, fmtVnd } from "@/lib/format";
-import { useBalance } from "@/lib/hooks";
+import { D, VND_PER_USDC } from "@/lib/config";
+import { AppError, errorText } from "@/lib/errors";
+import { fmtDate, fmtUsdc, fmtVnd, parseVnd, usdcNumber, vndToUsdc } from "@/lib/format";
+import { useBalance, usePoll } from "@/lib/hooks";
 import { type Dict, useT } from "@/lib/i18n";
-import { Status, type Lease } from "@/lib/lease";
+import { type AiReport, Status, type Lease } from "@/lib/lease";
 import { EMPTY_AUTH, relayEscrowCall, signDepositAuth } from "@/lib/tx";
 import { useWallet } from "@/lib/wallet";
 import { EvidenceForm, makeRuling, ReportBuilder, ReportView } from "./docs";
 import { Countdown, Money } from "./LeaseParts";
+import { useConfirm } from "./confirm";
+import { Icon } from "./icons";
 import { useToast } from "./toast";
 import { Button, Card, inputCls } from "./ui";
 import { useFaucet } from "./WalletMenu";
@@ -35,6 +37,7 @@ export function roleOf(L: Lease, me?: Address): Role {
 export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now: number; refresh: () => Promise<void> }) {
   const w = useWallet();
   const toast = useToast();
+  const ask = useConfirm();
   const t = useT();
   const a = t.act;
   const loc = t.locale;
@@ -45,12 +48,50 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
   const [busy, setBusy] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
   const [deduction, setDeduction] = useState("");
+  const [deductAmt, setDeductAmt] = useState(0n);
   const [acceptYield, setAcceptYield] = useState(true);
   const [toTenantPct, setToTenantPct] = useState(50);
   const [rulingText, setRulingText] = useState("");
 
-  const rw = D.responseWindow;
-  const mt = D.mediationTimeout;
+  // The mediator can copy the AI's suggested split into the ruling form once someone bought the report.
+  const { data: aiReport } = usePoll<AiReport | null>(
+    async () => {
+      if (L.status !== Status.Disputed || role !== "mediator") return null;
+      const res = await fetch(`/api/ai-report/${id}?quote=1`);
+      return res.ok ? ((await res.json()) as { report?: AiReport }).report ?? null : null;
+    },
+    [id.toString(), L.status, role],
+    8000,
+  );
+
+  // One tap for a newcomer: create a quick wallet, get test USDC, and reserve, all without gas.
+  const [quickStep, setQuickStep] = useState<"wallet" | "funds" | "sign" | null>(null);
+  async function quickReserve() {
+    setBusy("quick");
+    try {
+      setQuickStep("wallet");
+      const acc = w.createQuick(t.wallet.tenantName);
+      setQuickStep("funds");
+      const res = await fetch("/api/faucet", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ address: acc.address }) });
+      if (!res.ok) {
+        const j = (await res.json()) as { error?: string; detail?: string };
+        if (j.error !== "FaucetEnough") throw new AppError(j.error || "FaucetFailed", j.detail);
+      }
+      setQuickStep("sign");
+      const as = { address: acc.address, signTypedData: (p: Parameters<typeof w.signTypedDataAs>[1]) => w.signTypedDataAs(acc.id, p) };
+      const tx = await relayEscrowCall(as, "reserveWithAuthorization", [id, await signDepositAuth(as, L.holdAmount)]);
+      toast({ tone: "good", text: a.reserved, tx });
+      await Promise.all([refresh(), refreshBalance()]);
+    } catch (e) {
+      toast({ tone: "bad", text: errorText(t, e) });
+    } finally {
+      setBusy(null);
+      setQuickStep(null);
+    }
+  }
+
+  const rw = L.responseWindow;
+  const mt = L.mediationTimeout;
   const moveIn = Number(L.moveInDeadline);
   const actionAt = Number(L.actionAt);
   const signer = me ? { address: me, signTypedData: w.signTypedData } : null;
@@ -110,13 +151,47 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
         ) : (
           <div className="space-y-2 rounded-none border border-zinc-800 p-3">
             <label className="block text-sm font-medium">{a.deductAmount}</label>
-            <input
-              className={inputCls}
-              inputMode="decimal"
-              value={deduction}
-              onChange={(e) => setDeduction(e.target.value.replace(/[^\d.]/g, ""))}
-              placeholder={a.deductPlaceholder}
-            />
+            <div className="grid grid-cols-4 gap-1.5">
+              {[10, 25, 50, 100].map((pct) => {
+                const amt = (L.depositAmount * BigInt(pct)) / 100n;
+                const on = deductAmt === amt;
+                return (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => {
+                      setDeductAmt(amt);
+                      setDeduction(String(Math.round((usdcNumber(amt) * VND_PER_USDC) / 1000) * 1000));
+                    }}
+                    className={`border py-1.5 font-mono text-xs font-bold transition-all duration-150 active:scale-95 ${
+                      on ? "border-brand-500 bg-brand-500 text-white" : "border-zinc-700 text-zinc-300 hover:border-zinc-500"
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                );
+              })}
+            </div>
+            <div className="relative">
+              <input
+                className={`${inputCls} pr-10`}
+                inputMode="numeric"
+                value={deduction ? parseVnd(deduction).toLocaleString(loc) : ""}
+                onChange={(e) => {
+                  const vnd = parseVnd(e.target.value);
+                  setDeduction(vnd ? String(vnd) : "");
+                  const amt = vndToUsdc(vnd);
+                  setDeductAmt(amt > L.depositAmount ? L.depositAmount : amt);
+                }}
+                placeholder={a.deductPlaceholder}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">₫</span>
+            </div>
+            {deductAmt > 0n && (
+              <p className="animate-fade-in text-xs text-zinc-400">
+                {a.deductPreview(fmtUsdc(deductAmt, loc), fmtVnd(L.depositAmount - deductAmt, loc))}
+              </p>
+            )}
             <EvidenceForm
               leaseId={id.toString()}
               role="landlord"
@@ -124,7 +199,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
               submitLabel={a.sendProposal}
               busy={busy === "deduct"}
               onSubmit={async (h) => {
-                const amount = BigInt(Math.round(Number(deduction || "0") * 1e6));
+                const amount = deductAmt;
                 if (amount <= 0n || amount > L.depositAmount) {
                   toast({ tone: "bad", text: a.deductInvalid });
                   return;
@@ -167,6 +242,17 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
             </>
           );
         if (role === "mediator") return <p className="text-sm text-zinc-400">{a.mediatorOffer}</p>;
+        if (!me && L.tenant === zeroAddress && D.mockToken)
+          return (
+            <>
+              <p className="text-sm text-zinc-300">{a.reserveBody(<Money x={L.holdAmount} />, fmtDate(L.moveInDeadline, loc))}</p>
+              <Button className="w-full text-base" loading={busy === "quick"} disabled={now > moveIn} onClick={quickReserve}>
+                <Icon name="bolt" className="h-4 w-4" />
+                {busy === "quick" && quickStep ? a.quickSteps[quickStep] : a.quickReserve}
+              </Button>
+              <p className="text-xs text-zinc-400">{a.quickReserveHint}</p>
+            </>
+          );
         return <p className="text-sm text-zinc-400">{me ? a.lockedOther : a.noWalletReserve}</p>;
       }
 
@@ -246,8 +332,9 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
                 variant="ghost"
                 className="w-full"
                 loading={busy === "back"}
-                onClick={() => {
-                  if (confirm(a.backOutConfirm)) run("back", () => call("cancelReservation", [id]), a.backedOut);
+                onClick={async () => {
+                  if (await ask({ title: a.backOut, body: a.backOutConfirm, confirm: a.backOutYes, danger: true }))
+                    run("back", () => call("cancelReservation", [id]), a.backedOut);
                 }}
               >
                 {a.backOut}
@@ -346,6 +433,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
 
       case Status.Disputed: {
         const by = actionAt + mt;
+        const ai = aiReport;
         const toTenant = (L.balance * BigInt(toTenantPct)) / 100n;
         return (
           <>
@@ -354,6 +442,19 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
             {role === "mediator" && (
               <div className="space-y-3 rounded-none border border-zinc-800 p-3">
                 <p className="text-sm font-semibold">{a.ruling}</p>
+                {ai && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToTenantPct(Math.round((100 - ai.suggestedDeductionPct) / 5) * 5);
+                      if (!rulingText.trim()) setRulingText(a.aiRulingText(ai.suggestedDeductionPct, ai.summary));
+                    }}
+                    className="flex w-full animate-fade-up items-center gap-2 border border-dashed border-brand-500/60 bg-brand-500/5 px-3 py-2 text-left text-sm font-semibold text-brand-300 transition-colors hover:bg-brand-500/15"
+                  >
+                    <Icon name="sparkles" className="h-4 w-4 shrink-0" />
+                    {a.useAi(ai.suggestedDeductionPct)}
+                  </button>
+                )}
                 <input
                   type="range"
                   min={0}
@@ -401,7 +502,7 @@ export function ActionPanel({ id, L, now, refresh }: { id: bigint; L: Lease; now
     <Card className="space-y-3 border-brand-500/40 ring-4 ring-brand-500/10">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-bold">{a.todo}</h2>
-        <span className="text-right text-xs font-medium text-zinc-400">{t.roles[role]}</span>
+        <span data-embed-hide className="text-right text-xs font-medium text-zinc-400">{t.roles[role]}</span>
       </div>
       {body}
       {role === "tenant" && L.status === Status.Reserved && L.conditionHash !== zeroHash && (

@@ -13,7 +13,7 @@ import { get, list, put } from "@vercel/blob";
  * With BLOB_READ_WRITE_TOKEN set (Vercel Blob), data survives deploys and restarts.
  * Without it, data goes to a local folder, which is what you want on a laptop.
  */
-const useBlob = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const blobEnabled = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 export function dataDir() {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
@@ -21,7 +21,7 @@ export function dataDir() {
 }
 
 export function storageMode() {
-  return useBlob() ? "vercel-blob" : "local-disk";
+  return blobEnabled() ? "vercel-blob" : "local-disk";
 }
 
 async function streamToBuffer(stream: ReadableStream<Uint8Array>) {
@@ -38,7 +38,7 @@ async function streamToBuffer(stream: ReadableStream<Uint8Array>) {
 // ---------------------------------------------------------------- content-addressed files
 
 export async function putFile(hash: string, bytes: Uint8Array, contentType: string) {
-  if (useBlob()) {
+  if (blobEnabled()) {
     await put(`files/${hash}`, Buffer.from(bytes), {
       access: "public",
       contentType,
@@ -55,7 +55,7 @@ export async function putFile(hash: string, bytes: Uint8Array, contentType: stri
 }
 
 export async function getFile(hash: string): Promise<{ bytes: Buffer; contentType: string } | null> {
-  if (useBlob()) {
+  if (blobEnabled()) {
     try {
       const res = await get(`files/${hash}`, { access: "public" });
       if (!res || res.statusCode !== 200) return null;
@@ -82,7 +82,7 @@ const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 export async function putRecord(collection: string, id: string, value: unknown) {
   if (!SAFE.test(collection) || !SAFE_ID.test(id)) throw new Error("Bad record name");
   const body = JSON.stringify(value);
-  if (useBlob()) {
+  if (blobEnabled()) {
     await put(`records/${collection}/${id}.json`, body, {
       access: "public",
       contentType: "application/json",
@@ -99,7 +99,7 @@ export async function putRecord(collection: string, id: string, value: unknown) 
 
 export async function getRecord<T>(collection: string, id: string): Promise<T | null> {
   if (!SAFE.test(collection) || !SAFE_ID.test(id)) return null;
-  if (useBlob()) {
+  if (blobEnabled()) {
     try {
       const res = await get(`records/${collection}/${id}.json`, { access: "public", useCache: false });
       if (!res || res.statusCode !== 200) return null;
@@ -117,7 +117,7 @@ export async function getRecord<T>(collection: string, id: string): Promise<T | 
 
 export async function listRecords<T>(collection: string, limit = 500): Promise<T[]> {
   if (!SAFE.test(collection)) return [];
-  if (useBlob()) {
+  if (blobEnabled()) {
     const out: T[] = [];
     let cursor: string | undefined;
     do {

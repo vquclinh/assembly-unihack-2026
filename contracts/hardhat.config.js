@@ -20,6 +20,12 @@ module.exports = {
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
     },
   },
+  // REPORT_GAS=1 npx hardhat test prints the gas used by every function.
+  gasReporter: {
+    enabled: !!process.env.REPORT_GAS,
+    currency: "USD",
+    token: "AVAX",
+  },
   etherscan: {
     // Routescan (Snowtrace) does not need a real API key for Fuji.
     apiKey: { avalancheFujiTestnet: "verifyContract" },

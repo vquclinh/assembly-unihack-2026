@@ -115,15 +115,15 @@ export default function RoomsPage() {
                     <Icon name="home" className="h-12 w-12" />
                   </div>
                 )}
-                <span className="absolute left-3 top-3 bg-canvas/90 px-2 py-1 font-mono text-[11px] font-bold text-zinc-200">#{room.id}</span>
+                <span className="absolute left-3 top-3 bg-canvas/90 px-2 py-1 font-mono text-xs font-bold text-zinc-200">#{room.id}</span>
                 {room.trusted && (
-                  <span className="absolute right-3 top-3 flex items-center gap-1 bg-brand-500 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white">
+                  <span className="absolute right-3 top-3 flex items-center gap-1 bg-brand-500 px-2 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-white">
                     <Icon name="shield" className="h-3 w-3" />
                     {t.badge.chip}
                   </span>
                 )}
                 {room.photos.length > 1 && (
-                  <span className="absolute bottom-3 right-3 bg-canvas/90 px-2 py-0.5 font-mono text-[10px] text-zinc-300">+{room.photos.length - 1}</span>
+                  <span className="absolute bottom-3 right-3 bg-canvas/90 px-2 py-0.5 font-mono text-[11px] text-zinc-300">+{room.photos.length - 1}</span>
                 )}
               </Link>
               <div className="flex flex-1 flex-col gap-3 p-4">
@@ -154,7 +154,7 @@ export default function RoomsPage() {
                   {room.yieldOptIn && <Badge tone="neutral">{r.yieldOn}</Badge>}
                   {room.reports > 0 && <Badge tone="bad">{r.reports(room.reports)}</Badge>}
                 </div>
-                <p className="font-mono text-[11px] text-zinc-500">{r.moveInBy(fmtDate(room.moveInDeadline, loc))}</p>
+                <p className="font-mono text-xs text-zinc-500">{r.moveInBy(fmtDate(room.moveInDeadline, loc))}</p>
                 <div className="mt-auto flex items-center justify-between gap-3 pt-2">
                   <ReportButton landlord={room.landlord} leaseId={room.id} onSent={() => void refresh()} />
                   <Link href={`/l/${room.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-400 hover:text-brand-300">

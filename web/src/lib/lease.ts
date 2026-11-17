@@ -40,6 +40,10 @@ export type Lease = {
   leaseEnd: bigint;
   activatedAt: bigint;
   actionAt: bigint;
+  /** Seconds each side has to answer, chosen per lease when the offer is created. */
+  responseWindow: number;
+  /** Seconds the mediator has to rule before the disputed amount is split 50/50. */
+  mediationTimeout: number;
   status: number;
   landlordYieldOptIn: boolean;
   yieldOn: boolean;
@@ -144,16 +148,17 @@ export type Ruling = {
  * The first second at which anyone may call `finalize` on this lease, or null if the
  * current status has no deadline. Mirrors the TooEarly checks in CocEscrow.finalize.
  */
-export function finalizeDueAt(L: Pick<Lease, "status" | "moveInDeadline" | "actionAt">, responseWindow: number, mediationTimeout: number) {
+export function finalizeDueAt(L: Pick<Lease, "status" | "moveInDeadline" | "actionAt" | "responseWindow" | "mediationTimeout">) {
+  const rw = Number(L.responseWindow);
   switch (L.status) {
     case Status.Reserved:
-      return Number(L.moveInDeadline) + responseWindow + 1;
+      return Number(L.moveInDeadline) + rw + 1;
     case Status.NoShowClaimed:
     case Status.ReleaseRequested:
     case Status.SettlementProposed:
-      return Number(L.actionAt) + responseWindow + 1;
+      return Number(L.actionAt) + rw + 1;
     case Status.Disputed:
-      return Number(L.actionAt) + mediationTimeout + 1;
+      return Number(L.actionAt) + Number(L.mediationTimeout) + 1;
     default:
       return null;
   }

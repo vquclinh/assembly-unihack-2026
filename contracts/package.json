@@ -5,6 +5,8 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:gas": "REPORT_GAS=1 hardhat test",
+    "coverage": "hardhat coverage",
     "deploy:fuji": "hardhat run scripts/deploy.js --network fuji",
     "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
     "node": "hardhat node",

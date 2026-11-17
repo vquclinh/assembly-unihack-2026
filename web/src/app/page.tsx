@@ -1,8 +1,117 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
-import { ButtonLink, Eyebrow } from "@/components/ui";
+import { ButtonLink, Eyebrow, Skeleton } from "@/components/ui";
+import { isDeployed } from "@/lib/config";
+import { fmtVnd } from "@/lib/format";
+import { usePoll } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
+
+/** Counts up to a number when it first appears, then follows live changes smoothly. */
+function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const start = performance.now();
+    const a = from.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = reduce ? 1 : Math.min(1, (now - start) / 1200);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = a + (value - a) * eased;
+      setShown(v);
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else from.current = value;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{format(shown)}</>;
+}
+
+type Live = { secured: string; lockedNow: string; leases: number; completed: number };
+
+function LiveStrip() {
+  const t = useT();
+  const h = t.home;
+  const { data } = usePoll<Live | null>(
+    async () => {
+      if (!isDeployed) return null;
+      const res = await fetch("/api/stats");
+      return res.ok ? res.json() : null;
+    },
+    [],
+    15000,
+  );
+  const vnd = (x: string) => (n: number) => fmtVnd((BigInt(x) * BigInt(Math.round(n * 1000))) / 1000n, t.locale);
+  const items = data
+    ? [
+        { label: h.live.secured, node: <CountUp value={1} format={vnd(data.secured)} /> },
+        { label: h.live.locked, node: <CountUp value={1} format={vnd(data.lockedNow)} /> },
+        { label: h.live.leases, node: <CountUp value={data.leases} format={(n) => Math.round(n).toLocaleString(t.locale)} /> },
+        { label: h.live.completed, node: <CountUp value={data.completed} format={(n) => Math.round(n).toLocaleString(t.locale)} /> },
+      ]
+    : null;
+  if (!isDeployed) return null;
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-widest text-emerald-400">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          {h.liveTitle}
+        </p>
+        <ButtonLink href="/stats" variant="ghost" className="min-h-9 px-2 text-xs">
+          {t.nav.stats} →
+        </ButtonLink>
+      </div>
+      <div className="grid gap-px border border-zinc-800 bg-zinc-800 sm:grid-cols-2 lg:grid-cols-4">
+        {(items ?? [0, 1, 2, 3].map(() => null)).map((it, i) => (
+          <div key={i} className="bg-surface p-5">
+            {it ? (
+              <>
+                <p className="text-2xl font-extrabold tabular-nums tracking-tight text-white sm:text-3xl">{it.node}</p>
+                <p className="mt-2 font-mono text-xs uppercase tracking-wider text-zinc-400">{it.label}</p>
+              </>
+            ) : (
+              <>
+                <Skeleton className="h-8 w-2/3" />
+                <Skeleton className="mt-3 h-3 w-1/2" />
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-zinc-600">{h.liveNote}</p>
+    </section>
+  );
+}
+
+function Faq() {
+  const h = useT().home;
+  return (
+    <section>
+      <h2 className="mb-6 text-3xl font-bold tracking-tight text-white">{h.faqTitle}</h2>
+      <div className="divide-y divide-zinc-800 border border-zinc-800 bg-surface">
+        {h.faq.map(([q, a]) => (
+          <details key={q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-white">
+              {q}
+              <span className="grid h-7 w-7 shrink-0 place-items-center border border-zinc-700 text-zinc-400 transition-transform duration-300 group-open:rotate-45 group-open:border-brand-500 group-open:text-brand-400">
+                +
+              </span>
+            </summary>
+            <p className="mt-3 animate-fade-up text-sm leading-relaxed text-zinc-400">{a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 const STEP_ICONS: IconName[] = ["link", "lock", "camera", "logOut"];
 const GUARANTEE_ICONS: IconName[] = ["shield", "clock", "scale", "zap", "userCheck", "sparkles"];
@@ -18,7 +127,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[46rem] -translate-x-1/2 bg-brand-500/20 blur-[120px]" />
 
         <div className="relative grid items-center gap-12 lg:grid-cols-[1.15fr_1fr]">
-          <div>
+          <div className="stagger">
             <Eyebrow className="mb-5">{h.eyebrow}</Eyebrow>
             <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl">{h.title}</h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-400">{h.lead}</p>
@@ -27,8 +136,9 @@ export default function Home() {
                 {h.ctaCreate}
                 <Icon name="arrowRight" className="h-4 w-4" />
               </ButtonLink>
-              <ButtonLink href="/me" variant="secondary" className="px-6 text-base">
-                {h.ctaMine}
+              <ButtonLink href="/demo" variant="secondary" className="px-6 text-base">
+                <Icon name="play" className="h-4 w-4 text-brand-500" />
+                {h.ctaDemo}
               </ButtonLink>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs uppercase tracking-wider text-zinc-500">
@@ -41,9 +151,15 @@ export default function Home() {
             </ul>
           </div>
 
-          <DemoCard />
+          <div className="animate-fade-up [animation-delay:200ms]">
+            <div className="animate-float">
+              <DemoCard />
+            </div>
+          </div>
         </div>
       </section>
+
+      <LiveStrip />
 
       {/* Problem with numbers */}
       <section>
@@ -54,7 +170,7 @@ export default function Home() {
           {h.stats.map(([value, label]) => (
             <div key={label} className="border border-zinc-800 border-t-2 border-t-brand-500 bg-surface p-5">
               <p className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{value}</p>
-              <p className="mt-3 font-mono text-[11px] uppercase leading-relaxed tracking-wider text-zinc-400">{label}</p>
+              <p className="mt-3 font-mono text-xs uppercase leading-relaxed tracking-wider text-zinc-400">{label}</p>
             </div>
           ))}
         </div>
@@ -66,7 +182,7 @@ export default function Home() {
         <h2 className="mb-8 text-3xl font-bold tracking-tight text-white">{h.howTitle}</h2>
         <ol className="grid gap-px border border-zinc-800 bg-zinc-800 sm:grid-cols-2 lg:grid-cols-4">
           {h.steps.map(([title, desc], i) => (
-            <li key={title} className="group relative bg-surface p-6 transition-colors hover:bg-surface-2">
+            <li key={title} className="group relative bg-surface p-6 transition-all duration-300 hover:bg-surface-2">
               <div className="mb-6 flex items-center justify-between">
                 <span className="font-mono text-sm font-bold text-brand-500">{String(i + 1).padStart(2, "0")}</span>
                 <Icon name={STEP_ICONS[i]} className="h-5 w-5 text-zinc-500 transition-colors group-hover:text-brand-500" />
@@ -83,8 +199,8 @@ export default function Home() {
         <h2 className="mb-8 text-3xl font-bold tracking-tight text-white">{h.guaranteesTitle}</h2>
         <div className="grid gap-px border border-zinc-800 bg-zinc-800 sm:grid-cols-2 lg:grid-cols-3">
           {h.guarantees.map(([title, desc], i) => (
-            <div key={title} className="bg-canvas p-6">
-              <span className="grid h-10 w-10 place-items-center border border-brand-500/40 bg-brand-500/10 text-brand-500">
+            <div key={title} className="group bg-canvas p-6 transition-colors duration-300 hover:bg-surface">
+              <span className="grid h-10 w-10 place-items-center border border-brand-500/40 bg-brand-500/10 text-brand-500 transition-transform duration-300 group-hover:-translate-y-1 group-hover:rotate-[-6deg]">
                 <Icon name={GUARANTEE_ICONS[i]} className="h-5 w-5" />
               </span>
               <h3 className="mt-5 font-bold text-white">{title}</h3>
@@ -93,6 +209,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <Faq />
 
       {/* Scope */}
       <section className="flex gap-4 border border-zinc-800 border-l-2 border-l-brand-500 bg-surface p-6 text-sm text-zinc-400">
@@ -116,7 +234,7 @@ function DemoCard() {
       <div className="border border-zinc-700 bg-surface shadow-[8px_8px_0_0_var(--color-brand-500)]">
         <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-3">
           <span className="font-mono text-xs font-bold uppercase tracking-widest text-zinc-400">{d.id}</span>
-          <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+          <span className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider text-emerald-400">
             <span className="h-1.5 w-1.5 animate-pulse bg-emerald-400" />
             {t.status[3]}
           </span>
@@ -124,7 +242,7 @@ function DemoCard() {
 
         <div className="px-5 pt-5">
           <p className="text-sm text-zinc-400">{d.room}</p>
-          <p className="mt-4 font-mono text-[11px] uppercase tracking-widest text-zinc-500">{d.locked}</p>
+          <p className="mt-4 font-mono text-xs uppercase tracking-widest text-zinc-500">{d.locked}</p>
           <p className="mt-1 flex items-center gap-3 text-4xl font-extrabold tracking-tight text-white">
             {d.amount}
             <Icon name="lock" className="h-6 w-6 text-brand-500" />
@@ -135,18 +253,18 @@ function DemoCard() {
           {t.steps.map((s, i) => (
             <li key={s}>
               <span className={`block h-1 ${i < current ? "bg-brand-500" : i === current ? "bg-brand-400 animate-pulse" : "bg-zinc-800"}`} />
-              <span className={`mt-2 block truncate font-mono text-[10px] uppercase tracking-wide ${i <= current ? "text-zinc-200" : "text-zinc-600"}`}>{s}</span>
+              <span className={`mt-2 block truncate font-mono text-[11px] uppercase tracking-wide ${i <= current ? "text-zinc-200" : "text-zinc-600"}`}>{s}</span>
             </li>
           ))}
         </ol>
 
         <div className="mt-6 grid grid-cols-2 border-t border-zinc-800">
           <div className="border-r border-zinc-800 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{d.landlord}</p>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">{d.landlord}</p>
             <p className="mt-1 text-sm font-semibold text-zinc-200">{d.landlordNote}</p>
           </div>
           <div className="p-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{d.tenant}</p>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">{d.tenant}</p>
             <p className="mt-1 text-sm font-semibold text-zinc-200">{d.tenantNote}</p>
           </div>
         </div>

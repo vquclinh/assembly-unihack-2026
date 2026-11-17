@@ -14,12 +14,12 @@ Coc holds rental deposits in a smart contract on Avalanche, so a fake landlord c
 
 | Criterion | Points | How Coc earns them |
 |---|---|---|
-| Technical Implementation | 25 | Nine-state escrow machine, automatic deadlines enforced by a keeper, immediate payout of the undisputed part, ERC-4626 vault, push-with-pull-fallback payments, a soulbound badge contract, 34 tests |
-| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); AI reports paid per call over x402 and settled on Avalanche; an ERC-5192 credential other contracts can read with `isTrusted`; verified contracts |
+| Technical Implementation | 25 | Nine-state escrow machine, automatic deadlines enforced by a keeper, immediate payout of the undisputed part, ERC-4626 vault, push-with-pull-fallback payments, a soulbound badge contract, deadlines chosen per lease, a queued relayer that never clashes on nonces, 37 tests with a gas report in CI, a written threat model |
+| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); AI reports paid per call over x402 and settled on Avalanche; an ERC-5192 credential other contracts can read with `isTrusted`; verified contracts with a live solvency check on a Transparency page; every action shows its confirmation time on Avalanche and the gas Coc paid |
 | Creativity & Innovation | 15 | Not one of the 20 suggested topics. It combines the mechanics of #3 (stake and check-in), #8 (escrow with a dispute window) and #9 (yield on idle float) into a new, local problem, and adds an AI damage assessor that is paid by machine-to-machine payment but can never move money |
 | Impact & Use Case | 15 | Anyone who has rented a room has worried about the deposit. A room finder where every listing is an escrow link, signed scam reports, a printable bilingual agreement and calendar reminders make it usable by people who never heard of a blockchain |
 | Presentation & Pitching | 10 | Opening line: "Who here has lost a deposit?" |
-| UI/UX & Demo | 10 | A one-click judge demo with landlord, tenant and mediator side by side, live stats, one button per step, bilingual |
+| UI/UX & Demo | 10 | A judge demo that plays three stories on its own (happy ending, dispute with AI, landlord ghosts) with landlord, tenant and mediator side by side; one-tap reserve with no wallet; a "needs your action" inbox; smooth animations; installable on phones; bilingual |
 
 ## Hard questions and our answers
 
@@ -58,4 +58,5 @@ Reports are signed by a wallet, one per wallet per landlord, and shown apart fro
 - v0.4: project proposal (Markdown and PDF).
 - v0.5: Avalanche dark theme for the app and the proposal.
 - v0.6: judge demo, AI damage reports over x402, trusted landlord badge, room finder with scam reports, live stats, keeper, bilingual printable agreement and calendar reminders.
-- Next: test the whole flow on Fuji, host on Vercel, verify the badge on Snowtrace, pitch deck and demo video.
+- v0.7: per-lease deadlines (contract v2), self-playing judge demo with three stories, Transparency page with live solvency, full on-chain history, "needs your action" inbox, one-tap reserve, wallet backup, before/after photo slider, mediator directory, relayer queue and rate limits, CI and 5-minute keeper on GitHub Actions, SECURITY.md, PWA, animations throughout.
+- Next: redeploy v2 on Fuji, host on Vercel, pitch deck and demo video.

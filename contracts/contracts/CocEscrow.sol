@@ -64,6 +64,8 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         uint64 leaseEnd;
         uint64 activatedAt;
         uint64 actionAt; // start of the current waiting window
+        uint32 responseWindow; // seconds each side gets to answer, chosen when the link is created
+        uint32 mediationTimeout; // seconds the mediator gets to rule
         Status status;
         bool landlordYieldOptIn;
         bool yieldOn;
@@ -101,8 +103,12 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
 
     IERC20 public immutable token;
     IERC4626 public immutable vault; // address(0) = yield disabled on this deployment
+    /// @notice Defaults used by `createOffer`. `createOfferWithWindows` lets each lease pick its own.
     uint256 public immutable responseWindow;
     uint256 public immutable mediationTimeout;
+    /// @notice Bounds for per-lease windows: short enough for a live demo, long enough for real life.
+    uint256 public constant MIN_WINDOW = 30 seconds;
+    uint256 public constant MAX_WINDOW = 60 days;
 
     uint256 public leaseCount;
     mapping(uint256 => Lease) private _leases;
@@ -130,6 +136,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         bool yieldOptIn,
         bytes32 termsHash
     );
+    event OfferWindows(uint256 indexed id, uint32 responseWindow, uint32 mediationTimeout);
     event OfferCancelled(uint256 indexed id);
     event Reserved(uint256 indexed id, address indexed tenant, uint256 amount);
     event ConditionProposed(uint256 indexed id, bytes32 conditionHash);
@@ -166,7 +173,9 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         uint256 responseWindow_,
         uint256 mediationTimeout_
     ) ERC2771Context(forwarder_) {
-        if (address(token_) == address(0) || responseWindow_ == 0 || mediationTimeout_ == 0) revert BadParams();
+        if (address(token_) == address(0)) revert BadParams();
+        if (responseWindow_ < MIN_WINDOW || responseWindow_ > MAX_WINDOW) revert BadParams();
+        if (mediationTimeout_ < MIN_WINDOW || mediationTimeout_ > MAX_WINDOW) revert BadParams();
         if (address(vault_) != address(0) && vault_.asset() != address(token_)) revert BadParams();
         token = token_;
         vault = vault_;
@@ -202,6 +211,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
     // --------------------------------------------------------------- landlord
 
     /// @notice Step 1. Landlord creates a deposit link to send over Zalo/Messenger.
+    ///         Uses the deployment's default response and mediation windows.
     /// @param tenant optional: lock the link to one wallet. address(0) = whoever opens the link.
     function createOffer(
         address tenant,
@@ -213,6 +223,62 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         bool yieldOptIn,
         bytes32 termsHash
     ) external returns (uint256 id) {
+        id = _createOffer(
+            tenant,
+            mediator,
+            holdAmount,
+            depositAmount,
+            moveInDeadline,
+            leaseEnd,
+            yieldOptIn,
+            termsHash,
+            uint32(responseWindow),
+            uint32(mediationTimeout)
+        );
+    }
+
+    /// @notice Same as `createOffer`, with this lease's own windows: days for a real lease,
+    ///         seconds for a live demo. Both sides see them before any money moves.
+    function createOfferWithWindows(
+        address tenant,
+        address mediator,
+        uint256 holdAmount,
+        uint256 depositAmount,
+        uint64 moveInDeadline,
+        uint64 leaseEnd,
+        bool yieldOptIn,
+        bytes32 termsHash,
+        uint32 responseWindow_,
+        uint32 mediationTimeout_
+    ) external returns (uint256 id) {
+        if (responseWindow_ < MIN_WINDOW || responseWindow_ > MAX_WINDOW) revert BadParams();
+        if (mediationTimeout_ < MIN_WINDOW || mediationTimeout_ > MAX_WINDOW) revert BadParams();
+        id = _createOffer(
+            tenant,
+            mediator,
+            holdAmount,
+            depositAmount,
+            moveInDeadline,
+            leaseEnd,
+            yieldOptIn,
+            termsHash,
+            responseWindow_,
+            mediationTimeout_
+        );
+    }
+
+    function _createOffer(
+        address tenant,
+        address mediator,
+        uint256 holdAmount,
+        uint256 depositAmount,
+        uint64 moveInDeadline,
+        uint64 leaseEnd,
+        bool yieldOptIn,
+        bytes32 termsHash,
+        uint32 responseWindow_,
+        uint32 mediationTimeout_
+    ) internal returns (uint256 id) {
         address landlord = _msgSender();
         if (
             holdAmount == 0 ||
@@ -236,6 +302,8 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         L.leaseEnd = leaseEnd;
         L.landlordYieldOptIn = yieldOptIn;
         L.termsHash = termsHash;
+        L.responseWindow = responseWindow_;
+        L.mediationTimeout = mediationTimeout_;
         L.status = Status.Offered;
 
         _landlordLeases[landlord].push(id);
@@ -243,6 +311,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         emit OfferCreated(
             id, landlord, tenant, mediator, holdAmount, depositAmount, moveInDeadline, leaseEnd, yieldOptIn, termsHash
         );
+        emit OfferWindows(id, responseWindow_, mediationTimeout_);
     }
 
     function cancelOffer(uint256 id) external {
@@ -276,7 +345,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
     }
 
     /// @notice After the move-in deadline: landlord says the tenant never showed up.
-    ///         The tenant gets `responseWindow` to dispute, otherwise the holding deposit goes to the landlord.
+    ///         The tenant gets the lease's response window to dispute, otherwise the holding deposit goes to the landlord.
     function claimNoShow(uint256 id) external {
         Lease storage L = _leases[id];
         if (L.status != Status.Reserved) revert WrongStatus();
@@ -288,12 +357,12 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
     }
 
     /// @notice Move-out. `deduction == 0` returns the whole deposit to the tenant in one click.
-    ///         Otherwise the tenant gets `responseWindow` to accept or dispute.
+    ///         Otherwise the tenant gets the lease's response window to accept or dispute.
     function proposeSettlement(uint256 id, uint256 deduction, bytes32 evidence) external nonReentrant {
         Lease storage L = _leases[id];
         if (_msgSender() != L.landlord) revert NotAllowed();
         if (L.status == Status.ReleaseRequested) {
-            if (block.timestamp > L.actionAt + responseWindow) revert TooLate();
+            if (block.timestamp > L.actionAt + L.responseWindow) revert TooLate();
         } else if (L.status != Status.Active) {
             revert WrongStatus();
         }
@@ -361,7 +430,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         emit ReservationCancelled(id, L.tenant, amount, 0);
     }
 
-    /// @notice Tenant moved out and asks for the deposit. The landlord gets `responseWindow`
+    /// @notice Tenant moved out and asks for the deposit. The landlord gets the lease's response window
     ///         to answer with `proposeSettlement`; silence means a full refund.
     function requestRelease(uint256 id) external {
         Lease storage L = _leases[id];
@@ -387,7 +456,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
         Lease storage L = _leases[id];
         if (_msgSender() != L.tenant) revert NotAllowed();
         if (L.status != Status.SettlementProposed && L.status != Status.NoShowClaimed) revert WrongStatus();
-        if (block.timestamp > L.actionAt + responseWindow) revert TooLate();
+        if (block.timestamp > L.actionAt + L.responseWindow) revert TooLate();
 
         uint256 contested;
         if (L.status == Status.SettlementProposed) {
@@ -436,7 +505,7 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
 
         if (s == Status.Reserved) {
             // Landlord never handed the room over and never claimed a no-show: tenant gets the money back.
-            if (block.timestamp <= uint256(L.moveInDeadline) + responseWindow) revert TooEarly();
+            if (block.timestamp <= uint256(L.moveInDeadline) + L.responseWindow) revert TooEarly();
             uint256 amount = L.balance;
             L.balance = 0;
             L.status = Status.Cancelled;
@@ -444,20 +513,20 @@ contract CocEscrow is ERC2771Context, ReentrancyGuard {
             _pay(id, L.tenant, amount);
             emit ReservationCancelled(id, address(0), 0, amount);
         } else if (s == Status.NoShowClaimed) {
-            if (block.timestamp <= L.actionAt + responseWindow) revert TooEarly();
+            if (block.timestamp <= L.actionAt + L.responseWindow) revert TooEarly();
             tenantStats[L.tenant].ghosted++;
             _close(id, L, 0, L.balance, "no-show");
         } else if (s == Status.ReleaseRequested) {
-            if (block.timestamp <= L.actionAt + responseWindow) revert TooEarly();
+            if (block.timestamp <= L.actionAt + L.responseWindow) revert TooEarly();
             _exitVault(id, L);
             landlordStats[L.landlord].timeouts++;
             _close(id, L, L.balance, 0, "landlord silent");
         } else if (s == Status.SettlementProposed) {
-            if (block.timestamp <= L.actionAt + responseWindow) revert TooEarly();
+            if (block.timestamp <= L.actionAt + L.responseWindow) revert TooEarly();
             tenantStats[L.tenant].timeouts++;
             _settleAsProposed(id, L, "tenant silent");
         } else if (s == Status.Disputed) {
-            if (block.timestamp <= L.actionAt + mediationTimeout) revert TooEarly();
+            if (block.timestamp <= L.actionAt + L.mediationTimeout) revert TooEarly();
             mediatorTimedOut[L.mediator]++;
             uint256 half = L.balance / 2;
             _close(id, L, L.balance - half, half, "mediator silent, split 50/50");

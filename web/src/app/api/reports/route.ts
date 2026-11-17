@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { type Address, type Hex, getAddress, isAddress, isHex, verifyTypedData } from "viem";
+import { rateLimit } from "@/lib/ratelimit";
+import { type Address, type Hex, getAddress, isAddress, isHex, verifyTypedData, zeroAddress } from "viem";
+import { readAllLeases } from "@/lib/chain";
 import { REPORT_DOMAIN, REPORT_REASONS, REPORT_TYPES, type ScamReport } from "@/lib/reports";
 import { listRecords, putRecord } from "@/lib/store";
 
@@ -7,19 +9,34 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Public view of a report: the signature stays server-side. */
-function view(r: ScamReport) {
-  return { landlord: r.landlord, reporter: r.reporter, leaseId: r.leaseId, reason: r.reason, note: r.note, timestamp: r.timestamp };
+function view(r: ScamReport, verified: boolean) {
+  return { landlord: r.landlord, reporter: r.reporter, leaseId: r.leaseId, reason: r.reason, note: r.note, timestamp: r.timestamp, verified };
+}
+
+/** Pairs "landlord:tenant" that really reserved a room on-chain, so their reports carry weight. */
+async function realTenancies() {
+  try {
+    const { leases } = await readAllLeases(10000);
+    return new Set(leases.filter((l) => l.tenant !== zeroAddress).map((l) => `${l.landlord.toLowerCase()}:${l.tenant.toLowerCase()}`));
+  } catch {
+    return new Set<string>();
+  }
 }
 
 export async function GET(req: Request) {
   const landlord = new URL(req.url).searchParams.get("landlord");
   const all = await listRecords<ScamReport>("reports");
   const rows = landlord && isAddress(landlord) ? all.filter((r) => r.landlord.toLowerCase() === landlord.toLowerCase()) : all;
-  rows.sort((a, b) => b.timestamp - a.timestamp);
-  return NextResponse.json({ count: rows.length, reports: rows.slice(0, 50).map(view) });
+  const real = await realTenancies();
+  const out = rows.map((r) => view(r, real.has(`${r.landlord.toLowerCase()}:${r.reporter.toLowerCase()}`)));
+  // Reports from people who actually paid this landlord come first.
+  out.sort((a, b) => Number(b.verified) - Number(a.verified) || b.timestamp - a.timestamp);
+  return NextResponse.json({ count: out.length, verified: out.filter((r) => r.verified).length, reports: out.slice(0, 50) });
 }
 
 export async function POST(req: Request) {
+  const limited = rateLimit(req, "reports", 10, 10 * 60_000);
+  if (limited) return limited;
   let body: Partial<ScamReport>;
   try {
     body = (await req.json()) as Partial<ScamReport>;

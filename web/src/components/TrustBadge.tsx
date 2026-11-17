@@ -142,7 +142,7 @@ export function TrustCard({ address, completed }: { address: Address; completed:
               </Button>
             )}
           </div>
-          <p className="font-mono text-[11px] text-zinc-500">
+          <p className="font-mono text-xs text-zinc-500">
             {b.readableBy}{" "}
             <a className="text-brand-400 hover:underline" href={explorerAddress(BADGE) || "#"} target="_blank" rel="noreferrer">
               {BADGE.slice(0, 10)}…

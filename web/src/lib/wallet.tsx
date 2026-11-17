@@ -34,11 +34,20 @@ type WalletCtx = {
   hasInjected: boolean;
   /** True when this page was opened with ?as=<walletId>, e.g. one column of the judge demo. */
   pinned: boolean;
+  /** JSON backup of every quick wallet in this browser (contains private keys). */
+  exportBackup: () => string;
+  /** Restores a backup file or a single private key. Returns how many wallets were added. */
+  importBackup: (text: string, label: string) => number;
+  /** Addresses whose key was saved in a backup file. */
+  backedUp: (address: Address) => boolean;
 };
+
+export type Backup = { kind: "coc-wallets"; v: 1; createdAt: string; wallets: { label: string; address: Address; privateKey: Hex }[] };
 
 const Ctx = createContext<WalletCtx | null>(null);
 const KEY = "coc.accounts.v1";
 const ACTIVE_KEY = "coc.active.v1";
+const BACKUP_KEY = "coc.backedup.v1";
 
 type Eip1193 = { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
 function injected(): Eip1193 | undefined {
@@ -87,6 +96,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [hasInjected, setHasInjected] = useState(false);
   const [pinned, setPinned] = useState(false);
+  const [saved, setSaved] = useState<string[]>([]);
   const listRef = useRef<StoredAccount[]>([]);
   const pinnedRef = useRef(false);
 
@@ -107,8 +117,71 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
     setActiveId(l.find((x) => x.id === a)?.id ?? l[0]?.id ?? null);
     setHasInjected(!!injected());
+    try {
+      setSaved(JSON.parse(localStorage.getItem(BACKUP_KEY) || "[]") as string[]);
+    } catch {}
     setReady(true);
   }, []);
+
+  const exportBackup = useCallback(() => {
+    const quick = listRef.current.filter((x): x is Extract<StoredAccount, { kind: "quick" }> => x.kind === "quick");
+    const backup: Backup = {
+      kind: "coc-wallets",
+      v: 1,
+      createdAt: new Date().toISOString(),
+      wallets: quick.map((x) => ({ label: x.label, address: x.address, privateKey: x.pk })),
+    };
+    const addrs = quick.map((x) => x.address.toLowerCase());
+    setSaved(addrs);
+    try {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(addrs));
+    } catch {}
+    return JSON.stringify(backup, null, 2);
+  }, []);
+
+  const importBackup = useCallback(
+    (text: string, label: string) => {
+      const keys: { label: string; pk: Hex }[] = [];
+      const raw = text.trim();
+      if (/^(0x)?[0-9a-fA-F]{64}$/.test(raw)) keys.push({ label, pk: (raw.startsWith("0x") ? raw : `0x${raw}`) as Hex });
+      else {
+        let parsed: Backup;
+        try {
+          parsed = JSON.parse(raw) as Backup;
+        } catch {
+          throw new AppError("BadBackup");
+        }
+        if (parsed?.kind !== "coc-wallets" || !Array.isArray(parsed.wallets)) throw new AppError("BadBackup");
+        for (const w of parsed.wallets) if (/^0x[0-9a-fA-F]{64}$/.test(w.privateKey)) keys.push({ label: w.label || label, pk: w.privateKey });
+      }
+      const next = [...listRef.current];
+      let added = 0;
+      let last: string | null = null;
+      for (const k of keys) {
+        const address = privateKeyToAccount(k.pk).address;
+        if (next.some((x) => x.address.toLowerCase() === address.toLowerCase())) continue;
+        const acc: StoredAccount = { id: crypto.randomUUID(), label: k.label, kind: "quick", pk: k.pk, address };
+        next.push(acc);
+        last = acc.id;
+        added++;
+      }
+      if (!keys.length) throw new AppError("BadBackup");
+      if (added) {
+        persist(next, last);
+        // A restored key is by definition already backed up somewhere.
+        const addrs = [...new Set([...saved, ...keys.map((k) => privateKeyToAccount(k.pk).address.toLowerCase())])];
+        setSaved(addrs);
+        try {
+          localStorage.setItem(BACKUP_KEY, JSON.stringify(addrs));
+        } catch {}
+      }
+      return added;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [saved],
+  );
+
+  const backedUp = useCallback((a: Address) => saved.includes(a.toLowerCase()), [saved]);
 
   const persist = useCallback((next: StoredAccount[], nextActive: string | null) => {
     listRef.current = next;
@@ -203,8 +276,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       signTypedDataAs,
       hasInjected,
       pinned,
+      exportBackup,
+      importBackup,
+      backedUp,
     };
-  }, [ready, list, activeStored, select, createQuick, connectInjected, rename, remove, signTypedData, signTypedDataAs, hasInjected, pinned]);
+  }, [ready, list, activeStored, select, createQuick, connectInjected, rename, remove, signTypedData, signTypedDataAs, hasInjected, pinned, exportBackup, importBackup, backedUp]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -17,8 +17,9 @@ const EXPLORER = {
 async function main() {
   const { ethers, network } = hre;
   const [deployer] = await ethers.getSigners();
-  const responseWindow = Number(process.env.RESPONSE_WINDOW || 300);
-  const mediationTimeout = Number(process.env.MEDIATION_TIMEOUT || 600);
+  // Defaults for createOffer(); each lease can pick its own windows with createOfferWithWindows().
+  const responseWindow = Number(process.env.RESPONSE_WINDOW || 3 * 86400);
+  const mediationTimeout = Number(process.env.MEDIATION_TIMEOUT || 7 * 86400);
 
   console.log(`Network:  ${network.name}`);
   console.log(`Deployer: ${deployer.address}`);
@@ -47,7 +48,8 @@ async function main() {
   const escrowArgs = [tokenAddress, await vault.getAddress(), await forwarder.getAddress(), responseWindow, mediationTimeout];
   const escrow = await (await ethers.getContractFactory("CocEscrow")).deploy(...escrowArgs);
   await escrow.waitForDeployment();
-  console.log(`CocEscrow:                ${await escrow.getAddress()}\n`);
+  const deployBlock = (await escrow.deploymentTransaction().wait()).blockNumber;
+  console.log(`CocEscrow:                ${await escrow.getAddress()} (block ${deployBlock})\n`);
 
   const out = {
     network: network.name,
@@ -59,6 +61,7 @@ async function main() {
     vault: await vault.getAddress(),
     forwarder: await forwarder.getAddress(),
     escrow: await escrow.getAddress(),
+    deployBlock,
     responseWindow,
     mediationTimeout,
     rpcUrl: PUBLIC_RPC[network.name] || "",

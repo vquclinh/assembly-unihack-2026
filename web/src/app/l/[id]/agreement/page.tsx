@@ -44,8 +44,8 @@ export default function AgreementPage() {
       deposit: `${fmtVnd(L.depositAmount, locale)} (${fmtUsdc(L.depositAmount, locale)})`,
       moveIn: vnDate(L.moveInDeadline, lang),
       leaseEnd: vnDate(L.leaseEnd, lang),
-      response: duration(D.responseWindow, lang),
-      mediation: duration(D.mediationTimeout, lang),
+      response: duration(L.responseWindow, lang),
+      mediation: duration(L.mediationTimeout, lang),
       yieldMode: L.yieldOn ? "on" : L.landlordYieldOptIn ? "offered" : "off",
     };
   };

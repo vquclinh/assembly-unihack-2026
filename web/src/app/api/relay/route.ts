@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { type Address, type Hex, concat, getAddress, isAddress, isHex } from "viem";
 import { BADGE, ESCROW, FORWARDER, forwarderAbi, hasBadge, isDeployed } from "@/lib/config";
-import { decodeRevert, relayerWallet, serverPublic } from "@/lib/server";
+import { rateLimit } from "@/lib/ratelimit";
+import { decodeRevert, relayerWallet, relayerWriteAndWait, serverPublic } from "@/lib/server";
 
 export const runtime = "nodejs";
 
@@ -12,8 +13,9 @@ type Body = {
 
 export async function POST(req: Request) {
   if (!isDeployed) return NextResponse.json({ error: "NotDeployed" }, { status: 503 });
-  const wallet = relayerWallet();
-  if (!wallet) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
+  if (!relayerWallet()) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
+  const limited = rateLimit(req, "relay", 40, 60_000);
+  if (limited) return limited;
 
   let body: Body;
   try {
@@ -60,16 +62,15 @@ export async function POST(req: Request) {
   }
 
   try {
-    const hash = await wallet.writeContract({
+    const { hash, receipt, ms, fee } = await relayerWriteAndWait({
       address: FORWARDER,
       abi: forwarderAbi,
       functionName: "execute",
       args: [request],
       gas: gas + 400_000n,
     });
-    const receipt = await serverPublic.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") return NextResponse.json({ error: "Reverted", detail: hash }, { status: 500 });
-    return NextResponse.json({ hash });
+    return NextResponse.json({ hash, ms, fee, block: receipt.blockNumber.toString() });
   } catch (e) {
     const { code, detail } = decodeRevert(e);
     return NextResponse.json({ error: code ?? "RelayFailed", detail }, { status: 500 });

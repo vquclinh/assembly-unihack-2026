@@ -6,10 +6,12 @@ import { type Address, type Hex, getAddress, isAddress, parseEventLogs, zeroAddr
 import { useToast } from "@/components/toast";
 import { Button, Card, Field, inputCls } from "@/components/ui";
 import { publicClient, chainNow } from "@/lib/client";
+import { duration } from "@/lib/agreement";
 import { escrowAbi, isDeployed } from "@/lib/config";
 import { uploadJson, uploadPhoto } from "@/lib/files";
 import { errorText } from "@/lib/errors";
 import { fmtUsdc, parseVnd, shortAddr, vndToUsdc } from "@/lib/format";
+import { usePoll } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import type { Terms } from "@/lib/lease";
 import { relayEscrowCall } from "@/lib/tx";
@@ -18,6 +20,12 @@ import { useWallet } from "@/lib/wallet";
 /** Preset durations in seconds; labels come from the dictionary in the same order. */
 const MOVE_IN = [10 * 60, 86400, 3 * 86400, 7 * 86400];
 const LENGTH = [30 * 60, 182 * 86400, 365 * 86400];
+/** [response window, mediation timeout] per preset. The contract accepts 30 s to 60 days. */
+const WINDOWS: [number, number][] = [
+  [2 * 60, 3 * 60],
+  [3 * 86400, 7 * 86400],
+  [7 * 86400, 14 * 86400],
+];
 
 /** Optional list of suggested mediators, e.g. "Student Affairs Office|0xabc...,..." */
 const SUGGESTED: { name: string; address: string }[] = (process.env.NEXT_PUBLIC_MEDIATORS || "")
@@ -46,6 +54,7 @@ export default function CreatePage() {
   const [notes, setNotes] = useState("");
   const [moveIn, setMoveIn] = useState(MOVE_IN[0]);
   const [length, setLength] = useState(LENGTH[0]);
+  const [win, setWin] = useState(0);
   const [mediator, setMediator] = useState("");
   const [lockTenant, setLockTenant] = useState("");
   const [yieldOptIn, setYieldOptIn] = useState(true);
@@ -55,6 +64,15 @@ export default function CreatePage() {
 
   const depositUsdc = vndToUsdc(parseVnd(deposit));
   const holdUsdc = vndToUsdc(parseVnd(hold));
+
+  const { data: directory } = usePoll<{ address: string; leases: number; resolved: number; timedOut: number }[]>(
+    async () => {
+      const res = await fetch("/api/mediators");
+      return res.ok ? ((await res.json()) as { mediators: [] }).mediators : [];
+    },
+    [],
+    60000,
+  );
 
   const mediatorChoices = useMemo(() => {
     const mine = w.accounts.filter((a) => a.id !== w.active?.id).map((a) => ({ name: `${a.label} ${c.yourWallet}`, address: a.address }));
@@ -92,7 +110,7 @@ export default function CreatePage() {
       };
       const termsHash = await uploadJson(terms);
       const now = await chainNow();
-      const hash = await relayEscrowCall({ address: w.active.address, signTypedData: w.signTypedData }, "createOffer", [
+      const hash = await relayEscrowCall({ address: w.active.address, signTypedData: w.signTypedData }, "createOfferWithWindows", [
         (lockTenant.trim() || zeroAddress) as Address,
         getAddress(mediator.trim()),
         holdUsdc,
@@ -101,6 +119,8 @@ export default function CreatePage() {
         BigInt(now + length),
         yieldOptIn,
         termsHash,
+        WINDOWS[win][0],
+        WINDOWS[win][1],
       ]);
       const receipt = await publicClient.getTransactionReceipt({ hash });
       const [ev] = parseEventLogs({ abi: escrowAbi, eventName: "OfferCreated", logs: receipt.logs });
@@ -202,6 +222,24 @@ export default function CreatePage() {
             </select>
           </Field>
         </div>
+        <Field label={c.windows} hint={c.windowsHint}>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {WINDOWS.map(([rw, mt], i) => (
+              <button
+                key={rw}
+                type="button"
+                onClick={() => setWin(i)}
+                aria-pressed={win === i}
+                className={`border p-3 text-left text-sm transition-all duration-200 hover:-translate-y-0.5 ${
+                  win === i ? "border-brand-500 bg-brand-500/10 text-white" : "border-zinc-700 text-zinc-300 hover:border-zinc-500"
+                }`}
+              >
+                <b className="block">{c.windowPresets[i]}</b>
+                <span className="text-xs text-zinc-400">{c.windowsLine(duration(rw, loc === "vi-VN" ? "vi" : "en"), duration(mt, loc === "vi-VN" ? "vi" : "en"))}</span>
+              </button>
+            ))}
+          </div>
+        </Field>
         <label className="flex items-start gap-3 rounded-none bg-zinc-900 p-3 text-sm">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-600" checked={yieldOptIn} onChange={(e) => setYieldOptIn(e.target.checked)} />
           <span>
@@ -225,6 +263,32 @@ export default function CreatePage() {
                 {m.name} · {shortAddr(m.address)}
               </button>
             ))}
+          </div>
+        )}
+        {directory && directory.filter((m) => m.resolved + m.timedOut > 0).length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">{c.directory}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {directory
+                .filter((m) => m.resolved + m.timedOut > 0 && m.address.toLowerCase() !== w.active?.address.toLowerCase())
+                .slice(0, 6)
+                .map((m) => (
+                  <button
+                    key={m.address}
+                    type="button"
+                    onClick={() => setMediator(m.address)}
+                    className={`border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+                      mediator.toLowerCase() === m.address.toLowerCase() ? "border-brand-500 bg-brand-500/10" : "border-zinc-700 hover:border-zinc-500"
+                    }`}
+                  >
+                    <span className="block font-mono text-xs text-zinc-200">{shortAddr(m.address)}</span>
+                    <span className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                      <span className="text-emerald-300">{c.resolvedN(m.resolved)}</span>
+                      <span className={m.timedOut ? "text-amber-300" : "text-zinc-500"}>{c.timedOutN(m.timedOut)}</span>
+                    </span>
+                  </button>
+                ))}
+            </div>
           </div>
         )}
         <Field label={c.mediatorAddress}>

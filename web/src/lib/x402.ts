@@ -1,7 +1,7 @@
 import "server-only";
 import { type Address, type Hex, getAddress, isAddress, isHex, parseSignature, parseUnits, verifyTypedData } from "viem";
 import { D, TOKEN, chain, tokenAbi } from "./config";
-import { relayerWallet, serverPublic } from "./server";
+import { relayerWallet, relayerWriteAndWait, serverPublic } from "./server";
 
 /**
  * Minimal x402 ("HTTP 402 Payment Required") server for pay-per-request APIs.
@@ -124,17 +124,14 @@ export async function verifyPayment(header: string | null, req: PaymentRequireme
 
 /** Moves the USDC on-chain. The service wallet is the payee and pays the gas. */
 export async function settlePayment(v: VerifiedPayment): Promise<Hex> {
-  const wallet = relayerWallet();
-  if (!wallet) throw new Error("NoRelayer");
   const sig = parseSignature(v.signature);
   const vByte = sig.v !== undefined ? Number(sig.v) : sig.yParity + 27;
-  const hash = await wallet.writeContract({
+  const { hash, receipt } = await relayerWriteAndWait({
     address: TOKEN,
     abi: tokenAbi,
     functionName: "receiveWithAuthorization",
     args: [v.auth.from, v.auth.to, BigInt(v.auth.value), BigInt(v.auth.validAfter), BigInt(v.auth.validBefore), v.auth.nonce, vByte, sig.r, sig.s],
   });
-  const receipt = await serverPublic.waitForTransactionReceipt({ hash });
   if (receipt.status !== "success") throw new Error("PaymentSettleFailed");
   return hash;
 }

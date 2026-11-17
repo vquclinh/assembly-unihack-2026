@@ -50,6 +50,16 @@ export const EMPTY_AUTH: Auth = {
   s: `0x${"0".repeat(64)}`,
 };
 
+/** How long Avalanche took to include each relayed transaction, and the gas fee Coc paid. */
+export type TxInfo = { ms: number; fee: bigint };
+const txInfo = new Map<string, TxInfo>();
+export function rememberTx(hash: string, info: TxInfo) {
+  txInfo.set(hash.toLowerCase(), info);
+}
+export function lookupTx(hash?: string) {
+  return hash ? txInfo.get(hash.toLowerCase()) : undefined;
+}
+
 let tokenName: string | null = null;
 
 /**
@@ -109,7 +119,8 @@ export async function relayCallRaw(signer: Signer, target: Address, abi: Abi, fu
       signature,
     }),
   });
-  const json = (await res.json()) as { hash?: Hex; error?: string; detail?: string };
+  const json = (await res.json()) as { hash?: Hex; error?: string; detail?: string; ms?: number; fee?: string };
   if (!res.ok || !json.hash) throw new AppError(json.error || "Unknown", json.detail);
+  if (json.ms !== undefined) rememberTx(json.hash, { ms: json.ms, fee: BigInt(json.fee ?? "0") });
   return json.hash;
 }

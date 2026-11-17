@@ -6,11 +6,11 @@ import { zeroHash } from "viem";
 import { ActionPanel } from "@/components/Actions";
 import { AiReportCard } from "@/components/AiReport";
 import { ReportButton } from "@/components/ScamReport";
-import { EvidenceView, ReportView, RulingView, TermsView, useTermsTitle } from "@/components/docs";
+import { EvidenceView, PhotoCompare, ReportView, RulingView, TermsView, useTermsTitle } from "@/components/docs";
 import { LeaseToolsCard, MoneyCard, PartiesCard, Receipt, ShareCard, Stepper } from "@/components/LeaseParts";
 import { useToast } from "@/components/toast";
-import { Badge, Card, Spinner } from "@/components/ui";
-import { D, isDeployed } from "@/lib/config";
+import { Badge, Card, CardSkeleton, Skeleton } from "@/components/ui";
+import { isDeployed } from "@/lib/config";
 import { useChainClock, useLease } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import { STATUS_TONE, Status, finalizeDueAt } from "@/lib/lease";
@@ -26,9 +26,18 @@ export default function LeasePage() {
   const title = useTermsTitle(snap?.lease.termsHash);
   const toast = useToast();
 
+  // The judge demo asks its panels to reload right after each step.
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.origin === window.location.origin && e.data === "coc:refresh") refresh();
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [refresh]);
+
   // Keeper: once a deadline has passed, ask the server to call `finalize` so the outcome
   // the contract promises happens without anyone pressing a button.
-  const dueAt = snap ? finalizeDueAt(snap.lease, D.responseWindow, D.mediationTimeout) : null;
+  const dueAt = snap ? finalizeDueAt(snap.lease) : null;
   const kicked = useRef("");
   useEffect(() => {
     if (!snap || id === null || dueAt === null || now < dueAt) return;
@@ -50,7 +59,20 @@ export default function LeasePage() {
   if (!isDeployed) return <p className="text-zinc-400">{t.lease.notConfigured}</p>;
   if (id === null) return <p className="text-zinc-400">{t.lease.invalidId}</p>;
   if (error && !snap) return <p className="text-rose-300">{t.lease.readFail(error.message)}</p>;
-  if (!snap) return <Spinner className="text-zinc-500" />;
+  if (!snap)
+    return (
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-2 w-full" />
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <CardSkeleton lines={4} />
+          <CardSkeleton lines={5} />
+        </div>
+      </div>
+    );
 
   const L = snap.lease;
   if (L.status === Status.None) return <p className="text-zinc-400">{t.lease.notFound(id.toString())}</p>;
@@ -62,7 +84,7 @@ export default function LeasePage() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div data-embed-hide className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-zinc-400">{t.lease.number(id.toString())}</span>
           <Badge tone={STATUS_TONE[L.status]}>{t.status[L.status]}</Badge>
         </div>
@@ -75,20 +97,25 @@ export default function LeasePage() {
           <ActionPanel id={id} L={L} now={now} refresh={async () => void (await refresh())} />
 
           {hasReport && !tenantSeesReportInPanel && (
-            <Card>
+            <Card data-embed-hide>
               <ReportView hash={L.conditionHash} />
             </Card>
           )}
           {L.landlordEvidence !== zeroHash && (
-            <Card>
+            <Card data-embed-hide>
               <EvidenceView hash={L.landlordEvidence} title={t.lease.landlordEvidence} />
+            </Card>
+          )}
+          {hasReport && L.landlordEvidence !== zeroHash && (
+            <Card>
+              <PhotoCompare condition={L.conditionHash} evidence={[L.landlordEvidence, ...(L.tenantEvidence !== zeroHash ? [L.tenantEvidence] : [])]} />
             </Card>
           )}
           {hasReport && L.landlordEvidence !== zeroHash && (
             <AiReportCard key={`${L.landlordEvidence}-${L.tenantEvidence}`} leaseId={id.toString()} contested={L.status === Status.Disputed ? L.disputedAmount : L.proposedDeduction} />
           )}
           {L.tenantEvidence !== zeroHash && (
-            <Card>
+            <Card data-embed-hide>
               <EvidenceView hash={L.tenantEvidence} title={t.lease.tenantResponse} />
             </Card>
           )}
@@ -106,18 +133,20 @@ export default function LeasePage() {
             </div>
           )}
           <MoneyCard L={L} value={snap.value} />
-          {L.status === Status.Offered && !isLandlord && (
+          <div data-embed-hide className="space-y-6">
+            {L.status === Status.Offered && !isLandlord && (
+              <Card>
+                <ReportButton landlord={L.landlord} leaseId={id.toString()} />
+              </Card>
+            )}
+            <PartiesCard L={L} me={w.active?.address} />
+            <Receipt id={id} L={L} status={L.status} />
+            <LeaseToolsCard id={id.toString()} L={L} now={now} />
             <Card>
-              <ReportButton landlord={L.landlord} leaseId={id.toString()} />
+              <h2 className="mb-2 font-bold">{t.lease.agreement}</h2>
+              <TermsView hash={L.termsHash} />
             </Card>
-          )}
-          <PartiesCard L={L} me={w.active?.address} />
-          <Receipt id={id} L={L} status={L.status} />
-          <LeaseToolsCard id={id.toString()} L={L} now={now} />
-          <Card>
-            <h2 className="mb-2 font-bold">{t.lease.agreement}</h2>
-            <TermsView hash={L.termsHash} />
-          </Card>
+          </div>
         </aside>
       </div>
     </div>

@@ -10,9 +10,9 @@ import { REPORT_DOMAIN, REPORT_REASONS, REPORT_TYPES, type ReportReason } from "
 import { useWallet } from "@/lib/wallet";
 import { Icon } from "./icons";
 import { useToast } from "./toast";
-import { Button, Card, inputCls } from "./ui";
+import { Badge, Button, Card, inputCls } from "./ui";
 
-type PublicReport = { reporter: Address; leaseId: string; reason: ReportReason; note: string; timestamp: number };
+type PublicReport = { reporter: Address; leaseId: string; reason: ReportReason; note: string; timestamp: number; verified?: boolean };
 
 export function useReports(landlord?: Address) {
   return usePoll<{ count: number; reports: PublicReport[] } | null>(
@@ -115,10 +115,17 @@ export function ReportList({ landlord }: { landlord: Address }) {
       {data && data.reports.length === 0 && <p className="mt-3 text-sm text-zinc-400">{r.none}</p>}
       <ul className="mt-3 divide-y divide-zinc-800">
         {data?.reports.map((x) => (
-          <li key={`${x.reporter}-${x.timestamp}`} className="py-2.5 text-sm">
-            <p className="font-medium text-zinc-100">{r.reasons[x.reason]}</p>
+          <li key={`${x.reporter}-${x.timestamp}`} className={x.verified ? "py-2.5 text-sm" : "py-2.5 text-sm opacity-60"}>
+            <p className="flex flex-wrap items-center gap-2 font-medium text-zinc-100">
+              {r.reasons[x.reason]}
+              {x.verified ? (
+                <Badge tone="good">{r.verifiedTenant}</Badge>
+              ) : (
+                <span className="text-xs font-normal text-zinc-500">{r.unverified}</span>
+              )}
+            </p>
             {x.note && <p className="text-zinc-400">{x.note}</p>}
-            <p className="mt-1 font-mono text-[11px] text-zinc-500">
+            <p className="mt-1 font-mono text-xs text-zinc-500">
               {shortAddr(x.reporter)} · #{x.leaseId} · {fmtDate(x.timestamp, t.locale)}
             </p>
           </li>

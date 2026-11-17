@@ -100,7 +100,7 @@ export default function StatsPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {big.map((b) => (
           <div key={b.label} className="border border-zinc-800 border-t-2 border-t-brand-500 bg-surface p-5">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">{b.label}</p>
+            <p className="font-mono text-xs uppercase tracking-wider text-zinc-400">{b.label}</p>
             <p className="mt-3 text-3xl font-extrabold tracking-tight text-white">{b.value}</p>
             <p className="mt-1 font-mono text-xs text-zinc-500">{b.sub}</p>
           </div>
