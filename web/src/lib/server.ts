@@ -54,11 +54,21 @@ export async function relayerWrite(w: Write): Promise<Hex> {
   return job;
 }
 
+/** A Fuji block takes about 2 seconds; a transaction not mined after this is stuck behind another one. */
+const RECEIPT_TIMEOUT_MS = 45_000;
+
 /** Sends through the relayer and waits for the block, timing how long Avalanche took to finalize it. */
 export async function relayerWriteAndWait(w: Write) {
   const started = Date.now();
   const hash = await relayerWrite(w);
-  const receipt = await serverPublic.waitForTransactionReceipt({ hash, pollingInterval: 250 });
+  let receipt;
+  try {
+    receipt = await serverPublic.waitForTransactionReceipt({ hash, pollingInterval: 250, timeout: RECEIPT_TIMEOUT_MS });
+  } catch (e) {
+    if ((e as Error).name !== "WaitForTransactionReceiptTimeoutError") throw e;
+    console.error(`[relayer] ${hash} not mined after ${RECEIPT_TIMEOUT_MS / 1000}s. Run "npm run relayer" in web/ to check for stuck transactions.`);
+    throw Object.assign(new Error("RelayerStuck"), { shortMessage: `RelayerStuck: ${hash}` });
+  }
   return {
     hash,
     receipt,
@@ -85,6 +95,7 @@ export function decodeRevert(err: unknown): { code?: string; detail: string } {
   }
   const detail = (err as { shortMessage?: string; message?: string }).shortMessage || String(err);
   if (/insufficient funds/i.test(String((err as { message?: string }).message ?? detail))) return { code: "RelayerEmpty", detail };
+  if ((err as Error)?.message === "RelayerStuck") return { code: "RelayerStuck", detail };
   if (!data || data === "0x") return { detail };
   try {
     const r = decodeErrorResult({ abi: allErrorsAbi, data });

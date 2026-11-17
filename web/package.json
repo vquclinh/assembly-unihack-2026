@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "keeper": "node scripts/keeper-loop.mjs"
+    "keeper": "node scripts/keeper-loop.mjs",
+    "relayer": "node scripts/relayer-status.mjs"
   },
   "dependencies": {
     "@vercel/blob": "2.8.2",
