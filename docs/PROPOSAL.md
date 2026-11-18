@@ -2,6 +2,10 @@
 
 **Project proposal** · Team Assembly · Team1 Vietnam UniHack 2026
 
+**Authors:** Quoc-Linh Vo (team leader), Thanh Nhat Nguyen  
+Faculty of Information Technology, University of Science, Ho Chi Minh City, Vietnam  
+Vietnam National University, Ho Chi Minh City, Vietnam
+
 **Track:** Social finance (own idea) · **Network:** Avalanche Fuji C-Chain
 
 ---
@@ -106,8 +110,10 @@ We focus on three concrete failure points:
 | University-vetted boarding house lists | Trusted source | Covers few rooms, does not hold money or resolve disputes |
 | Bank escrow or notarised contracts | Legally strong | Too slow and expensive for deposits of 1 to 5 million VND |
 | Rental listing platforms | Large inventory | Do not hold deposits or track behaviour after the lease starts |
+| Government deposit schemes abroad (England's tenancy deposit protection [11]) | Neutral holder backed by law | Not available in Vietnam; run by agencies, not open code |
+| Earlier blockchain rental projects (Rentberry, Rentible, Trustless Work's security-deposit escrow, hackathon projects such as RentChain) [13][14][15] | Show that deposits can be locked in a smart contract | Built for other markets and users who already hold crypto. None that we found combines a holding-deposit stage, tenant-only move-in confirmation, partial release on dispute and a wallet-free, VND-first experience for Vietnamese students |
 
-No existing option holds the deposit neutrally, enforces deadlines automatically and builds a public track record at the same time.
+No existing option holds the deposit neutrally, enforces deadlines automatically and builds a public track record at the same time. Deposit escrow itself is not a new idea: England has required it by law since 2007. What is new is a version shaped around how Vietnamese students actually rent, that needs no crypto knowledge.
 
 ---
 
@@ -163,6 +169,8 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 | **Transparency page** | Every contract with its verified source, and a live check that the money held covers every open deposit. |
 | **Needs your action** | One list of every lease waiting on you, with a countdown to the moment the contract decides without you. |
 | **One-tap reserve** | A student with no wallet presses one button; Coc creates the wallet, adds test USDC and locks the holding deposit. |
+| **Prices in VND** | Every amount is shown in Vietnamese dong first, with the USDC value beside it, and deductions are entered in VND. |
+| **Wallet backup** | A quick wallet can be backed up to a file, restored on another device, renamed or removed. |
 | **Before/after photos** | A slider over one image compares the move-in photo with the move-out evidence. |
 
 ---
@@ -182,7 +190,9 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
    ├─ /api/keeper     calls finalize once a deadline has passed
    ├─ /api/rooms, /api/stats, /api/reports   listings, live numbers, signed reports
    ├─ /api/history    full event history of a lease
+   ├─ /api/mediators  every mediator named on a lease, with their record
    ├─ /api/transparency  verification status and live solvency
+   ├─ /api/rpc        read-only Avalanche RPC proxy for the browser
    └─ /api/faucet     test USDC for the demo
               │
               ▼
@@ -206,15 +216,16 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 - **Tamper-evident evidence.** Photos and reports are stored off-chain under their keccak256 hash, which is the same value recorded on-chain. The app re-hashes every document it displays and shows whether it still matches.
 - **Sybil-resistant reputation.** Only leases that reached move-in count, and each is weighted by deposit size multiplied by time held ("USDC-days"). Faking a good record means locking real money for a long time.
 - **Optional yield.** If both sides opt in, the deposit sits in an ERC-4626 vault and yield is split 50/50. If the vault loses value, payouts are computed on what remains and the lease still closes. The MVP uses a simulated vault.
-- **Machine payments with x402.** The AI report endpoint answers HTTP 402 with payment requirements. The mediator signs an EIP-3009 authorisation for 0.10 USDC to the server, which verifies it, runs the model, then settles the payment on Avalanche and returns the receipt in the `X-PAYMENT-RESPONSE` header. No account, subscription or API key is needed on the buyer's side.
+- **Machine payments with x402.** The AI report endpoint answers HTTP 402 with payment requirements. The mediator signs an EIP-3009 authorisation for 0.10 USDC to the server, which verifies it, runs the model, then settles the payment on Avalanche and returns the receipt in the `X-PAYMENT-RESPONSE` header. No account, subscription or API key is needed on the buyer's side. If the model fails, the payment is never settled, so the mediator is not charged.
+- **A model that can be swapped.** The vision model is reached through OpenRouter (default: Gemini 2.5 Flash Lite, well under one US cent per report). If a model is retired or unavailable, the server falls back to the next one on a list, and each report records which model wrote it.
 - **Deadlines that enforce themselves.** A keeper calls `finalize` as soon as a deadline passes: the lease page triggers it, GitHub Actions sweeps every 5 minutes, a daily cron backs it up, and anyone else may call it too.
 - **Deadlines per lease.** Each offer stores its own response and mediation windows (30 seconds to 60 days), so the same contract serves a 12-month lease with 3-day windows and a 2-minute demo.
-- **A relayer that does not trip over itself.** Relayer transactions are queued so two never take the same nonce, and the relay, faucet and uploads are rate-limited per IP. See SECURITY.md for the full threat model.
+- **A relayer that does not trip over itself.** Relayer transactions are queued so two never take the same nonce, and the relay, faucet and uploads are rate-limited per IP. Each transaction gets a generous fee cap, so a sudden rise in Avalanche's base fee does not leave it waiting (the network still charges only the actual fee). A transaction that is not mined within 45 seconds is reported as stuck instead of hanging, and `npm run relayer` shows the relayer's balance and pending transactions and can clear stuck ones. See SECURITY.md for the full threat model.
 - **Token-agnostic.** The contract works with any EIP-3009 token, so it can switch to whatever regulated asset Vietnamese law permits.
 
 ### 7.4 Why blockchain, and why Avalanche
 
-A neutral escrow needs a holder that **neither side controls and that cannot change the rules afterwards**. A smart contract provides exactly that, without a licensed intermediary and at a cost low enough for deposits of a few million dong. Avalanche's C-Chain offers sub-second finality and very low fees, so each step feels like a normal app action. It is EVM-compatible, has native USDC with EIP-3009, and has a path to a dedicated Avalanche L1 if a university network or city wanted its own deposit chain with custom rules.
+A neutral escrow needs a holder that **neither side controls and that cannot change the rules afterwards**. A smart contract provides exactly that, without a licensed intermediary and at a cost low enough for deposits of a few million dong. Avalanche's C-Chain offers fast finality and very low fees, so each step feels like a normal app action. In our Fuji test run of the dispute story, every step, including signing, uploading evidence and relaying, was confirmed in 2.7 to 5.4 seconds (9.7 seconds for the AI report, which includes running the model), and the users paid no gas. It is EVM-compatible, has native USDC with EIP-3009, and has a path to a dedicated Avalanche L1 if a university network or city wanted its own deposit chain with custom rules.
 
 ---
 
@@ -248,7 +259,7 @@ A neutral escrow needs a holder that **neither side controls and that cannot cha
 | **What if the mediator is biased?** | Both sides choose the mediator in advance; the mediator can only split money between the parties; their ruling history is public. |
 | **Can reputation be gamed?** | Only completed leases count, weighted by money multiplied by time, which makes fake records costly. |
 | **Privacy** | No photos, names or addresses on-chain. Reputation contains only objective counts. |
-| **Smart-contract risk** | 29 automated tests cover normal flows and attacks (fake landlord, mediator self-dealing, forged relays, blocked recipients, vault loss). A production launch would require an independent audit. |
+| **Smart-contract risk** | 37 automated tests cover normal flows and attacks (fake landlord, mediator self-dealing, forged relays, blocked recipients, vault loss). A production launch would require an independent audit. |
 | **Ethics** | Coc does not resell anyone's content or data, does not speculate with deposits without consent, and is free for tenants. |
 
 ---
@@ -271,10 +282,20 @@ Delivered so far:
 - Escrow and badge contracts with all flows above and 37 passing tests, a gas report and CI on every push.
 - Gasless relayer, in-browser quick wallets and Core/MetaMask support.
 - Web app with deposit links and QR codes, photo condition reports, deduction and dispute flows, mediator ruling, on-chain receipts and public reputation pages.
-- A judge demo that plays three stories on its own (happy ending, dispute with AI, landlord ghosts), or lets judges click every step, with landlord, tenant and mediator side by side.
+- A judge demo that plays three stories on its own (happy ending, dispute with AI, landlord ghosts), or lets judges click every step, with landlord, tenant and mediator side by side. During autoplay a pointer moves to the real button in each person's window and presses it, with a caption naming who pressed what, and the final screen shows how much each side received.
 - A Transparency page with a live solvency check, the full on-chain history of every lease, a "needs your action" inbox, one-tap reserve, wallet backup and restore, and an installable mobile app (PWA).
 - AI damage reports paid over x402, the trusted landlord badge, a room finder with signed scam reports, live statistics, an automatic keeper, and a printable bilingual agreement with calendar reminders.
 - English and Vietnamese interface.
+
+### Live contracts on Avalanche Fuji
+
+| Contract | Address |
+|---|---|
+| CocEscrow | [`0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3`](https://testnet.snowtrace.io/address/0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3) |
+| CocForwarder | [`0xa147258E8C60fb29599F088aCCc74B97981865a8`](https://testnet.snowtrace.io/address/0xa147258E8C60fb29599F088aCCc74B97981865a8) |
+| CocBadge | [`0x8C5EA878bE96ADA142349283a50fc3AEF3e63551`](https://testnet.snowtrace.io/address/0x8C5EA878bE96ADA142349283a50fc3AEF3e63551) |
+| MockUSDC (test token, EIP-3009) | [`0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87`](https://testnet.snowtrace.io/address/0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87) |
+| DemoYieldVault (ERC-4626) | [`0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6`](https://testnet.snowtrace.io/address/0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6) |
 
 ## 12. Roadmap
 
@@ -290,6 +311,14 @@ Delivered so far:
 ## 13. Team
 
 **Team Assembly**, two students participating in Team1 Vietnam UniHack 2026.
+
+| Member | Role | Affiliation |
+|---|---|---|
+| Quoc-Linh Vo | Team leader | Faculty of Information Technology, University of Science, VNU-HCM |
+| Thanh Nhat Nguyen | Team member | Faculty of Information Technology, University of Science, VNU-HCM |
+
+Both authors: Faculty of Information Technology, University of Science, Ho Chi Minh City, Vietnam; Vietnam National University, Ho Chi Minh City, Vietnam.
+
 Repository: https://github.com/vquclinh/assembly-unihack-2026
 
 ---
@@ -308,3 +337,6 @@ Repository: https://github.com/vquclinh/assembly-unihack-2026
 10. Baker McKenzie, "Vietnam: New resolution on pilot program for digital and crypto assets market" (Resolution 05/2025/NQ-CP). https://www.bakermckenzie.com/-/media/files/insight/publications/alerts/09/vietnam-new-resolution-on-pilot-program-for-digital-and-crypto-assets-marke.pdf
 11. GOV.UK, "Tenancy deposit protection". https://www.gov.uk/tenancy-deposit-protection
 12. Luật sư Việt Nam, "Có được phép đặt cọc bằng vàng, ngoại tệ hay séc không?" (Civil Code Article 328). https://lsvn.vn/co-duoc-phep-dat-coc-bang-vang-ngoai-te-hay-sec-khong-1705289712-a139985.html
+13. Coin Bureau, "Rentberry: Ethereum solution for apartment rentals". https://coinbureau.com/ico/rentberry-ethereum-solution-apartment-rentals
+14. Rentible, "Deposit and rental smart contract". https://rentible.gitbook.io/rentible.io/real-world-assets-tokenization/product/deposit-and-rental-smart-contract
+15. Trustless Work, "Security deposits" use case. https://docs.trustlesswork.com/trustless-work/use-cases-by-indutry/security-deposits

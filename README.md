@@ -1,7 +1,7 @@
 # Coc (Cọc)
 
 **A neutral rental deposit escrow for students, running on Avalanche.**
-Team Assembly, Team1 Vietnam UniHack 2026.
+Team Assembly, Team1 Vietnam UniHack 2026: Quoc-Linh Vo (team leader) and Thanh Nhat Nguyen, Faculty of Information Technology, University of Science, VNU-HCM.
 
 Full project proposal (target users, Vietnam context, solution, legal analysis): [docs/PROPOSAL.md](docs/PROPOSAL.md) · [PDF](docs/PROPOSAL.pdf)
 
@@ -55,7 +55,7 @@ Every waiting state has a deadline. After it passes, anyone can call `finalize`,
 | **One-tap reserve** | lease page | A newcomer with no wallet presses one button: Coc creates a wallet, adds test USDC and locks the holding deposit. |
 | **Wallet backup** | wallet menu | Download a backup file, restore it or a private key, rename and remove wallets, with a warning when a wallet holding money was never backed up. |
 | **Before/after photos** | lease page, after a deduction | Drag across one image to compare the move-in photo with the move-out evidence. The mediator can copy the AI's suggested split into the ruling in one tap. |
-| **AI damage report, paid over x402** | lease page, after a deduction | A vision model (Qwen VL through OpenRouter) compares the move-in photos with the move-out evidence and suggests a split. The mediator pays 0.10 test USDC per report with the HTTP 402 "exact" scheme: an EIP-3009 authorization that the server verifies, then settles on Avalanche. Advice only: the contract accepts nothing but the mediator's ruling. |
+| **AI damage report, paid over x402** | lease page, after a deduction | A vision model (Gemini 2.5 Flash Lite through OpenRouter, with fallbacks) compares the move-in photos with the move-out evidence and suggests a split. The mediator pays 0.10 test USDC per report with the HTTP 402 "exact" scheme: an EIP-3009 authorization that the server verifies, then settles on Avalanche. Advice only: the contract accepts nothing but the mediator's ruling. |
 | **Trusted landlord badge** | `/u/[address]`, `/me` | `CocBadge` is a soulbound ERC-5192 token with fully on-chain SVG metadata. A landlord claims it gasless once the escrow has recorded clean leases. Anyone can revoke it the moment the record stops qualifying, and any contract can call `isTrusted(address)`. |
 | **Find a room** | `/rooms` | Public listings are open Coc deposit links, so the holding deposit can only go into the contract. Search, "trusted landlords only", sort by record, and the landlord's on-chain verdict on every card. |
 | **Scam reports** | room cards, lease page, profile | Community warnings signed with EIP-712 (one per wallet per landlord), shown apart from the on-chain facts. Reports from wallets that really reserved with that landlord are marked "Real tenant" and listed first. |
