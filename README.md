@@ -1,7 +1,7 @@
 # Tinco
 
 **A neutral rental deposit escrow for students, running on Avalanche.**
-Team Assembly, Team1 Vietnam UniHack 2026: Quoc-Linh Vo (team leader) and Thanh Nhat Nguyen, Faculty of Information Technology, University of Science, VNU-HCM.
+Team Assembly, Team1 Vietnam UniHack 2026: Quoc-Linh Vo, Faculty of Information Technology, University of Science, VNU-HCM.
 
 Full project proposal (target users, Vietnam context, solution, legal analysis): [docs/PROPOSAL.md](docs/PROPOSAL.md) · [PDF](docs/PROPOSAL.pdf)
 

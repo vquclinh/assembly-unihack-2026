@@ -2,7 +2,7 @@
 
 **Project proposal** · Team Assembly · Team1 Vietnam UniHack 2026
 
-**Authors:** Quoc-Linh Vo (team leader), Thanh Nhat Nguyen  
+**Author:** Quoc-Linh Vo  
 Faculty of Information Technology, University of Science, Ho Chi Minh City, Vietnam  
 Vietnam National University, Ho Chi Minh City, Vietnam
 
@@ -312,14 +312,11 @@ The contracts keep the project's working name, Coc, in their identifiers (for ex
 
 ## 13. Team
 
-**Team Assembly**, two students participating in Team1 Vietnam UniHack 2026.
+**Team Assembly** is a one-person team in Team1 Vietnam UniHack 2026.
 
-| Member | Role | Affiliation |
-|---|---|---|
-| Quoc-Linh Vo | Team leader | Faculty of Information Technology, University of Science, VNU-HCM |
-| Thanh Nhat Nguyen | Team member | Faculty of Information Technology, University of Science, VNU-HCM |
-
-Both authors: Faculty of Information Technology, University of Science, Ho Chi Minh City, Vietnam; Vietnam National University, Ho Chi Minh City, Vietnam.
+| Member | Affiliation |
+|---|---|
+| Quoc-Linh Vo | Faculty of Information Technology, University of Science, Ho Chi Minh City, Vietnam; Vietnam National University, Ho Chi Minh City, Vietnam |
 
 Repository: https://github.com/vquclinh/assembly-unihack-2026
 
