@@ -15,7 +15,7 @@ function esc(s: string) {
 }
 
 export function buildIcs(events: CalendarEvent[], url: string) {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Coc//Deposit escrow//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Tinco//Deposit escrow//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
   const now = stamp(Math.floor(Date.now() / 1000));
   for (const e of events) {
     lines.push(

@@ -149,7 +149,7 @@ export function Icon({ name, className = "h-5 w-5" }: { name: IconName; classNam
   );
 }
 
-/** The Coc mark: a coin held inside a protective ring, on Avalanche red. */
+/** The Tinco mark: a coin held inside a protective ring, on Avalanche red. */
 export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>

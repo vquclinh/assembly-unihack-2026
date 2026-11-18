@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
 
-/** Lets phones install Coc to the home screen and open it full screen, like an app. */
+/** Lets phones install Tinco to the home screen and open it full screen, like an app. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Cọc · Rental deposit escrow",
-    short_name: "Cọc",
+    name: "Tinco · Rental deposit escrow",
+    short_name: "Tinco",
     description: "Rental deposits held by a smart contract on Avalanche, not in anyone's pocket.",
     start_url: "/",
     display: "standalone",

@@ -30,5 +30,5 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "Coc web app: deposit links, gasless relayer and content-addressed evidence store"
+  "description": "Tinco web app: deposit links, gasless relayer and content-addressed evidence store"
 }

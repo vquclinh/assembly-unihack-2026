@@ -1,4 +1,4 @@
-# Coc: A Neutral Rental Deposit Escrow for Vietnamese Students
+# Tinco: A Neutral Rental Deposit Escrow for Vietnamese Students
 
 **Project proposal** · Team Assembly · Team1 Vietnam UniHack 2026
 
@@ -17,14 +17,14 @@ Every year, hundreds of thousands of Vietnamese students leave home to study in 
 1. **Fake listings.** Scammers post cheap rooms in student Facebook and Zalo groups, ask for a small "holding deposit", and disappear.
 2. **Withheld deposits.** At move-out, some landlords find excuses to keep part or all of the deposit, and the tenant has no practical way to get it back.
 
-**Coc** (from *cọc*, Vietnamese for "deposit") moves the deposit out of the landlord's pocket and into a neutral smart contract on Avalanche. The contract releases money only under rules that both sides agreed to up front:
+**Tinco** (from the Vietnamese *tin*, "trust", and *cọc*, "deposit") moves the deposit out of the landlord's pocket and into a neutral smart contract on Avalanche. The contract releases money only under rules that both sides agreed to up front:
 
 - A landlord can never receive money unless the tenant confirms they actually moved in, or a mediator they both chose rules in the landlord's favour.
 - If the landlord stays silent after the tenant moves out, the deposit returns to the tenant automatically.
 - If there is a disagreement, the undisputed part is paid immediately and only the contested amount waits for a mediator, who can split it between the two parties but can never take it.
 - Every completed lease builds a public, tamper-proof track record for landlords and tenants.
 
-Students and landlords use Coc through a simple bilingual web app. They need no crypto wallet, no AVAX and no blockchain knowledge. A working MVP is live on the Avalanche Fuji testnet.
+Students and landlords use Tinco through a simple bilingual web app. They need no crypto wallet, no AVAX and no blockchain knowledge. A working MVP is live on the Avalanche Fuji testnet.
 
 ---
 
@@ -61,7 +61,7 @@ At every step, the money sits with one party and the other party has to trust th
 
 - **Digital payments are mainstream.** By the end of 2024, **86.97% of Vietnamese adults held a bank account** (up from 31% in 2014), QR payment volume grew **106.7% year on year**, and cashless transactions have grown more than 67% per year on average since 2021 [8]. Students already move rent and deposits digitally; they just have no safe place to put them.
 - **Digital assets now have a legal basis.** The Law on Digital Technology Industry, effective 1 January 2026, recognises digital assets as property under the Civil Code [9], and Resolution 05/2025/NQ-CP opened a regulated pilot market for crypto assets [10].
-- **Other countries already require neutral deposit holding.** In England, landlords must place tenancy deposits in a government-approved deposit protection scheme within 30 days, and disputes go to a free adjudication service [11]. Vietnam has no equivalent. Coc offers the same protection with code instead of a government agency.
+- **Other countries already require neutral deposit holding.** In England, landlords must place tenancy deposits in a government-approved deposit protection scheme within 30 days, and disputes go to a free adjudication service [11]. Vietnam has no equivalent. Tinco offers the same protection with code instead of a government agency.
 
 ---
 
@@ -117,7 +117,7 @@ No existing option holds the deposit neutrally, enforces deadlines automatically
 
 ---
 
-## 6. Proposed solution: Coc
+## 6. Proposed solution: Tinco
 
 ### 6.1 The idea in one paragraph
 
@@ -125,7 +125,7 @@ The landlord creates a **deposit link** and sends it to the tenant over Zalo. Th
 
 ### 6.2 The tenant's and landlord's journey
 
-| Stage | What the user does | What Coc guarantees |
+| Stage | What the user does | What Tinco guarantees |
 |---|---|---|
 | **1. Deposit link** | Landlord enters the room details, holding amount, total deposit, move-in deadline and a mediator, then shares the link or QR code. | Room details are fingerprinted on-chain, so they cannot be changed later. |
 | **2. Reserve** | Tenant opens the link and pays the holding deposit with one tap. | The landlord cannot touch the money. If the landlord does not hand over the room by the deadline, the tenant is refunded automatically. |
@@ -150,7 +150,7 @@ The landlord creates a **deposit link** and sends it to the tenant over Zalo. Th
 
 Because every waiting state has a deadline, **money can never be stuck**. Anyone, including the app's background service, can trigger the outcome once a deadline passes.
 
-### 6.4 What Coc deliberately does not do
+### 6.4 What Tinco deliberately does not do
 
 - It does **not** collect or process rent. Rent continues to be paid as usual.
 - It does **not** store photos or personal details on the blockchain. Only cryptographic fingerprints (hashes) are on-chain.
@@ -168,7 +168,7 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
 | **Live statistics** | Money locked now, total secured, amicable rate and rulings, read directly from the contract. |
 | **Transparency page** | Every contract with its verified source, and a live check that the money held covers every open deposit. |
 | **Needs your action** | One list of every lease waiting on you, with a countdown to the moment the contract decides without you. |
-| **One-tap reserve** | A student with no wallet presses one button; Coc creates the wallet, adds test USDC and locks the holding deposit. |
+| **One-tap reserve** | A student with no wallet presses one button; Tinco creates the wallet, adds test USDC and locks the holding deposit. |
 | **Prices in VND** | Every amount is shown in Vietnamese dong first, with the USDC value beside it, and deductions are entered in VND. |
 | **Wallet backup** | A quick wallet can be backed up to a file, restored on another device, renamed or removed. |
 | **Before/after photos** | A slider over one image compares the move-in photo with the move-out evidence. |
@@ -183,7 +183,7 @@ Because every waiting state has a deadline, **money can never be stuck**. Anyone
   Tenant / Landlord / Mediator  (phone browser, no wallet install)
               │  signs actions with a quick in-browser key or Core/MetaMask
               ▼
-  Coc web app (Next.js)
+  Tinco web app (Next.js)
    ├─ /api/relay      pays gas and forwards signed requests (ERC-2771)
    ├─ /api/files      stores photos and reports under their keccak256 hash
    ├─ /api/ai-report  AI damage report behind an x402 paywall (HTTP 402)
@@ -253,14 +253,14 @@ A neutral escrow needs a holder that **neither side controls and that cannot cha
 
 | Question | Our position |
 |---|---|
-| **Is a USDC deposit legal in Vietnam?** | This is a grey area and we state it openly. Digital assets are recognised as property from 2026 [9], and the crypto pilot requires trading through licensed providers [10]. Coc only holds collateral, never processes rent, and never holds money on its own behalf. The contract is token-agnostic, so production would use whatever licensed asset or VND-backed instrument the law allows. The MVP runs on testnet with a test token that has no value. |
-| **Does Coc replace the law on deposits?** | No. It implements the same logic as Civil Code Article 328 (the side that backs out loses the holding deposit) and adds evidence and deadlines. Parties keep every legal right they have today. |
+| **Is a USDC deposit legal in Vietnam?** | This is a grey area and we state it openly. Digital assets are recognised as property from 2026 [9], and the crypto pilot requires trading through licensed providers [10]. Tinco only holds collateral, never processes rent, and never holds money on its own behalf. The contract is token-agnostic, so production would use whatever licensed asset or VND-backed instrument the law allows. The MVP runs on testnet with a test token that has no value. |
+| **Does Tinco replace the law on deposits?** | No. It implements the same logic as Civil Code Article 328 (the side that backs out loses the holding deposit) and adds evidence and deadlines. Parties keep every legal right they have today. |
 | **Why would landlords adopt it?** | The contract protects landlords too, honest landlords gain a visible record, and universities can require it for their recommended-housing lists. |
 | **What if the mediator is biased?** | Both sides choose the mediator in advance; the mediator can only split money between the parties; their ruling history is public. |
 | **Can reputation be gamed?** | Only completed leases count, weighted by money multiplied by time, which makes fake records costly. |
 | **Privacy** | No photos, names or addresses on-chain. Reputation contains only objective counts. |
 | **Smart-contract risk** | 37 automated tests cover normal flows and attacks (fake landlord, mediator self-dealing, forged relays, blocked recipients, vault loss). A production launch would require an independent audit. |
-| **Ethics** | Coc does not resell anyone's content or data, does not speculate with deposits without consent, and is free for tenants. |
+| **Ethics** | Tinco does not resell anyone's content or data, does not speculate with deposits without consent, and is free for tenants. |
 
 ---
 
@@ -268,8 +268,8 @@ A neutral escrow needs a holder that **neither side controls and that cannot cha
 
 - **Free for tenants**, always.
 - **Landlords** pay a small flat fee per lease or a share of the optional yield, in exchange for protection and a verified profile.
-- **Universities** partner with Coc to power their recommended-housing lists and act as default mediators, starting with one pilot university and its student affairs office.
-- **Channel:** the deposit link travels over Zalo and Facebook, the same places students already look for rooms, so Coc fits the existing behaviour rather than replacing it.
+- **Universities** partner with Tinco to power their recommended-housing lists and act as default mediators, starting with one pilot university and its student affairs office.
+- **Channel:** the deposit link travels over Zalo and Facebook, the same places students already look for rooms, so Tinco fits the existing behaviour rather than replacing it.
 
 ---
 
@@ -296,6 +296,8 @@ Delivered so far:
 | CocBadge | [`0x8C5EA878bE96ADA142349283a50fc3AEF3e63551`](https://testnet.snowtrace.io/address/0x8C5EA878bE96ADA142349283a50fc3AEF3e63551) |
 | MockUSDC (test token, EIP-3009) | [`0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87`](https://testnet.snowtrace.io/address/0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87) |
 | DemoYieldVault (ERC-4626) | [`0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6`](https://testnet.snowtrace.io/address/0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6) |
+
+The contracts keep the project's working name, Coc, in their identifiers (for example `CocEscrow`), since renaming them would mean redeploying and re-verifying them.
 
 ## 12. Roadmap
 

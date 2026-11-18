@@ -17,7 +17,7 @@ export function Footer() {
         <div className="space-y-3">
           <div className="flex items-center gap-2.5">
             <LogoMark className="h-8 w-8" />
-            <span className="text-lg font-extrabold tracking-tight text-white">cọc</span>
+            <span className="text-lg font-extrabold tracking-tight text-white">tinco</span>
           </div>
           <p className="max-w-sm text-sm text-zinc-400">{f.tagline}</p>
           <p className="font-mono text-xs uppercase tracking-wider text-zinc-600">

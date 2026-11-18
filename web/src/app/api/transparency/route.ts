@@ -32,7 +32,7 @@ async function sourcify(address: string): Promise<string | null> {
 }
 
 /**
- * Everything someone needs to check Coc without trusting us: contract addresses and their
+ * Everything someone needs to check Tinco without trusting us: contract addresses and their
  * verified source, and a live solvency check computed from chain state only.
  */
 export async function GET() {

@@ -46,7 +46,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (existing) return NextResponse.json({ report: existing });
   if (!aiConfigured()) return NextResponse.json({ error: "AiNotConfigured" }, { status: 503 });
   const url = new URL(req.url);
-  const r = await requirements(url.origin + url.pathname, `AI damage assessment for Coc lease #${id}`);
+  const r = await requirements(url.origin + url.pathname, `AI damage assessment for Tinco lease #${id}`);
   if (!r) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
   // Plain GET answers 402 as x402 clients expect. Our own UI polls with ?quote=1 and gets the
   // same body with 200, so the browser console does not fill with "402" errors.
@@ -67,7 +67,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const url = new URL(req.url);
-  const r = await requirements(url.origin + url.pathname, `AI damage assessment for Coc lease #${id}`);
+  const r = await requirements(url.origin + url.pathname, `AI damage assessment for Tinco lease #${id}`);
   if (!r) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
 
   let payment;

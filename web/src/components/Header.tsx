@@ -57,7 +57,7 @@ export function Header() {
         <Link href="/" className="group flex items-center gap-2.5">
           <LogoMark className="h-8 w-8 transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-105" />
           <span className="text-xl font-extrabold tracking-tight text-white">
-            cọc<sup className="ml-0.5 font-mono text-[10px] font-bold text-brand-500">AVAX</sup>
+            tinco<sup className="ml-0.5 font-mono text-[10px] font-bold text-brand-500">AVAX</sup>
           </span>
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2">

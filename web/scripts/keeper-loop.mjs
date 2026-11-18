@@ -1,4 +1,4 @@
-// Runs the keeper every 20 seconds against a running Coc web app.
+// Runs the keeper every 20 seconds against a running Tinco web app.
 // Usage: node scripts/keeper-loop.mjs [http://localhost:3000]
 // On Vercel the same sweep runs from vercel.json (daily on the Hobby plan), and every
 // lease page also triggers it as soon as one of its deadlines passes.

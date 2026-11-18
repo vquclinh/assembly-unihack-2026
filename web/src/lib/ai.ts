@@ -117,7 +117,7 @@ export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "
       headers: {
         authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "content-type": "application/json",
-        "x-title": "Coc deposit escrow",
+        "x-title": "Tinco deposit escrow",
       },
       body: JSON.stringify({
         model,

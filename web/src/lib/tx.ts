@@ -50,7 +50,7 @@ export const EMPTY_AUTH: Auth = {
   s: `0x${"0".repeat(64)}`,
 };
 
-/** How long Avalanche took to include each relayed transaction, and the gas fee Coc paid. */
+/** How long Avalanche took to include each relayed transaction, and the gas fee Tinco paid. */
 export type TxInfo = { ms: number; fee: bigint };
 const txInfo = new Map<string, TxInfo>();
 export function rememberTx(hash: string, info: TxInfo) {
@@ -94,7 +94,7 @@ export async function relayBadgeClaim(signer: Signer): Promise<Hex> {
   return relayCallRaw(signer, BADGE, badgeAbi, "claim", []);
 }
 
-/** Relays any call to one of Coc's contracts (the server refuses other targets). */
+/** Relays any call to one of Tinco's contracts (the server refuses other targets). */
 export async function relayCallRaw(signer: Signer, target: Address, abi: Abi, functionName: string, args: readonly unknown[]): Promise<Hex> {
   const data = encodeFunctionData({ abi, functionName, args });
   const nonce = (await publicClient.readContract({

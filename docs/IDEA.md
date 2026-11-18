@@ -1,8 +1,8 @@
-# Coc: the idea and the hard questions
+# Tinco: the idea and the hard questions
 
 ## One sentence
 
-Coc holds rental deposits in a smart contract on Avalanche, so a fake landlord cannot scam a student and a real landlord cannot keep the deposit on a whim.
+Tinco holds rental deposits in a smart contract on Avalanche, so a fake landlord cannot scam a student and a real landlord cannot keep the deposit on a whim.
 
 ## Who it is for
 
@@ -12,10 +12,10 @@ Coc holds rental deposits in a smart contract on Avalanche, so a fake landlord c
 
 ## Fit with the judging rubric (100 points)
 
-| Criterion | Points | How Coc earns them |
+| Criterion | Points | How Tinco earns them |
 |---|---|---|
 | Technical Implementation | 25 | Nine-state escrow machine, automatic deadlines enforced by a keeper, immediate payout of the undisputed part, ERC-4626 vault, push-with-pull-fallback payments, a soulbound badge contract, deadlines chosen per lease, a queued relayer that never clashes on nonces, 37 tests with a gas report in CI, a written threat model |
-| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); AI reports paid per call over x402 and settled on Avalanche; an ERC-5192 credential other contracts can read with `isTrusted`; verified contracts with a live solvency check on a Transparency page; every action shows its confirmation time on Avalanche and the gas Coc paid |
+| Avalanche Integration | 25 | All money and rules live on Fuji in USDC; gasless for users (ERC-2771 + EIP-3009); AI reports paid per call over x402 and settled on Avalanche; an ERC-5192 credential other contracts can read with `isTrusted`; verified contracts with a live solvency check on a Transparency page; every action shows its confirmation time on Avalanche and the gas Tinco paid |
 | Creativity & Innovation | 15 | Not one of the 20 suggested topics. It combines the mechanics of #3 (stake and check-in), #8 (escrow with a dispute window) and #9 (yield on idle float) into a new, local problem, and adds an AI damage assessor that is paid by machine-to-machine payment but can never move money |
 | Impact & Use Case | 15 | Anyone who has rented a room has worried about the deposit. A room finder where every listing is an escrow link, signed scam reports, a printable bilingual agreement and calendar reminders make it usable by people who never heard of a blockchain |
 | Presentation & Pitching | 10 | Opening line: "Who here has lost a deposit?" |
@@ -24,10 +24,10 @@ Coc holds rental deposits in a smart contract on Avalanche, so a fake landlord c
 ## Hard questions and our answers
 
 **Is a USDC deposit legal in Vietnam?**
-It is a grey area and we say so openly. Since 1 January 2026 digital assets are recognised as property under the Law on Digital Technology Industry. The pilot framework in Resolution 05/2025/NQ-CP requires crypto trading to go through licensed providers. Coc only holds collateral and never processes rent, so it does not use crypto as a means of payment. The contract is token-agnostic: the demo uses testnet USDC like the organisers' own suggested topics, and a production version would use whatever licensed asset the law allows. The platform never holds anyone's money.
+It is a grey area and we say so openly. Since 1 January 2026 digital assets are recognised as property under the Law on Digital Technology Industry. The pilot framework in Resolution 05/2025/NQ-CP requires crypto trading to go through licensed providers. Tinco only holds collateral and never processes rent, so it does not use crypto as a means of payment. The contract is token-agnostic: the demo uses testnet USDC like the organisers' own suggested topics, and a production version would use whatever licensed asset the law allows. The platform never holds anyone's money.
 
 **Landlords hold the power today. Why would they use it?**
-Three reasons: the contract protects landlords too when a tenant walks away or damages the room; the public record helps good landlords win tenants; and universities can require Coc for their "safe housing" lists.
+Three reasons: the contract protects landlords too when a tenant walks away or damages the room; the public record helps good landlords win tenants; and universities can require Tinco for their "safe housing" lists.
 
 **Can a fake landlord still scam a tenant?**
 No. Only the tenant can confirm move-in. If the landlord claims a no-show, the tenant can object and the mediator decides.

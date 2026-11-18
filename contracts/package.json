@@ -1,7 +1,7 @@
 {
   "name": "coc-contracts",
   "version": "0.1.0",
-  "description": "Coc: neutral rental deposit escrow on Avalanche",
+  "description": "Tinco: neutral rental deposit escrow on Avalanche",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",

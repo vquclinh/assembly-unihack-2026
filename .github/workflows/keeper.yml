@@ -2,7 +2,7 @@ name: Keeper
 
 # Settles every lease whose deadline has passed, every 5 minutes (the shortest GitHub allows).
 # The app also settles a lease as soon as anyone opens its page, and Vercel's daily cron is a
-# last resort. Set two repository secrets: KEEPER_URL (e.g. https://coc.vercel.app) and
+# last resort. Set two repository secrets: KEEPER_URL (e.g. https://tinco.vercel.app) and
 # CRON_SECRET (the same value as in Vercel). Without KEEPER_URL the job does nothing.
 
 on:

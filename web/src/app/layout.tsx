@@ -9,9 +9,9 @@ import { WalletProvider } from "@/lib/wallet";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cọc · Neutral rental deposit escrow",
+  title: "Tinco · Neutral rental deposit escrow",
   description: "Rental deposits held in a smart contract on Avalanche, not in anyone's pocket.",
-  appleWebApp: { capable: true, title: "Cọc", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Tinco", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0a0a0b" };

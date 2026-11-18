@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   if (!r || !isAddress(r.from) || !isAddress(r.to) || !isHex(r.data) || !isHex(body.signature)) {
     return NextResponse.json({ error: "BadParams" }, { status: 400 });
   }
-  // The relayer only pays gas for calls into Coc's own contracts, never for arbitrary ones.
+  // The relayer only pays gas for calls into Tinco's own contracts, never for arbitrary ones.
   const allowed = [getAddress(ESCROW), ...(hasBadge ? [getAddress(BADGE)] : [])];
   if (!allowed.includes(getAddress(r.to)) || r.value !== "0") {
     return NextResponse.json({ error: "NotAllowed" }, { status: 400 });

@@ -1,11 +1,11 @@
-# Coc (Cọc)
+# Tinco
 
 **A neutral rental deposit escrow for students, running on Avalanche.**
 Team Assembly, Team1 Vietnam UniHack 2026: Quoc-Linh Vo (team leader) and Thanh Nhat Nguyen, Faculty of Information Technology, University of Science, VNU-HCM.
 
 Full project proposal (target users, Vietnam context, solution, legal analysis): [docs/PROPOSAL.md](docs/PROPOSAL.md) · [PDF](docs/PROPOSAL.pdf)
 
-*"Cọc" is Vietnamese for "deposit".* The deposit sits in a smart contract instead of in the landlord's pocket. Nobody, not the mediator and not the team that built this, can send it anywhere except to the tenant or the landlord.
+*"Tinco" joins the Vietnamese words "tin" (trust) and "cọc" (deposit): a deposit both sides can trust.* The deposit sits in a smart contract instead of in the landlord's pocket. Nobody, not the mediator and not the team that built this, can send it anywhere except to the tenant or the landlord.
 
 ## The problem
 
@@ -48,24 +48,26 @@ Every waiting state has a deadline. After it passes, anyone can call `finalize`,
 
 | Feature | Where | What it shows |
 |---|---|---|
-| **Judge demo** | `/demo` | Pick a story (happy ending, dispute with AI, landlord ghosts) and press **Play**: Coc plays landlord, tenant and mediator with real gasless transactions, step by step, in three live panels, with narration and the time each step took on Avalanche. Or click through every step yourself. |
+| **Judge demo** | `/demo` | Pick a story (happy ending, dispute with AI, landlord ghosts) and press **Play**: Tinco plays landlord, tenant and mediator with real gasless transactions, step by step, in three live panels, with narration and the time each step took on Avalanche. Or click through every step yourself. |
 | **Transparency** | `/transparency` | Every contract with its Sourcify verification status and bytecode size, a live solvency check (USDC held by the escrow and the vault against money owed on open deposits), and how many transactions the gas relayer has paid for. |
 | **Full on-chain history** | lease page | Every event of a lease from the offer to the last payment, each linked to its transaction, with the payouts as a receipt. Read through Routescan, or the RPC as a fallback. |
 | **Needs your action** | `/me`, red dot in the menu | Every lease waiting on you, with a countdown to the moment the contract decides without you. Also a one-tap withdrawal if a payment was held as credit. |
-| **One-tap reserve** | lease page | A newcomer with no wallet presses one button: Coc creates a wallet, adds test USDC and locks the holding deposit. |
+| **One-tap reserve** | lease page | A newcomer with no wallet presses one button: Tinco creates a wallet, adds test USDC and locks the holding deposit. |
 | **Wallet backup** | wallet menu | Download a backup file, restore it or a private key, rename and remove wallets, with a warning when a wallet holding money was never backed up. |
 | **Before/after photos** | lease page, after a deduction | Drag across one image to compare the move-in photo with the move-out evidence. The mediator can copy the AI's suggested split into the ruling in one tap. |
 | **AI damage report, paid over x402** | lease page, after a deduction | A vision model (Gemini 2.5 Flash Lite through OpenRouter, with fallbacks) compares the move-in photos with the move-out evidence and suggests a split. The mediator pays 0.10 test USDC per report with the HTTP 402 "exact" scheme: an EIP-3009 authorization that the server verifies, then settles on Avalanche. Advice only: the contract accepts nothing but the mediator's ruling. |
 | **Trusted landlord badge** | `/u/[address]`, `/me` | `CocBadge` is a soulbound ERC-5192 token with fully on-chain SVG metadata. A landlord claims it gasless once the escrow has recorded clean leases. Anyone can revoke it the moment the record stops qualifying, and any contract can call `isTrusted(address)`. |
-| **Find a room** | `/rooms` | Public listings are open Coc deposit links, so the holding deposit can only go into the contract. Search, "trusted landlords only", sort by record, and the landlord's on-chain verdict on every card. |
+| **Find a room** | `/rooms` | Public listings are open Tinco deposit links, so the holding deposit can only go into the contract. Search, "trusted landlords only", sort by record, and the landlord's on-chain verdict on every card. |
 | **Scam reports** | room cards, lease page, profile | Community warnings signed with EIP-712 (one per wallet per landlord), shown apart from the on-chain facts. Reports from wallets that really reserved with that landlord are marked "Real tenant" and listed first. |
-| **Mediator directory** | `/create` | Mediators who already ruled on Coc leases, with their ruled and timed-out counts from the contract. |
+| **Mediator directory** | `/create` | Mediators who already ruled on Tinco leases, with their ruled and timed-out counts from the contract. |
 | **Live stats** | `/stats` | Money locked now, total secured, amicable rate, refunds, rulings, read straight from the contract. |
 | **Keeper** | automatic | When a deadline passes, the lease page asks the server to call `finalize`; a GitHub Actions workflow sweeps every 5 minutes, a Vercel cron daily, and `npm run keeper` runs a loop. Nobody has to press a button for the promised outcome. |
-| **Gasless, with proof** | every action | After each transaction a toast shows how long Avalanche took to confirm it and the gas Coc paid. Relayer transactions are queued so they never clash on a nonce, and the relay, faucet and uploads are rate-limited per IP. |
+| **Gasless, with proof** | every action | After each transaction a toast shows how long Avalanche took to confirm it and the gas Tinco paid. Relayer transactions are queued so they never clash on a nonce, and the relay, faucet and uploads are rate-limited per IP. |
 | **Bilingual agreement and reminders** | `/l/[id]/agreement` | A printable A4 agreement in English and Vietnamese, built only from on-chain data, with the terms fingerprint and a QR code. Deadlines download as a `.ics` file with reminders a day and an hour before. |
 
 ## Deployment (Avalanche Fuji)
+
+The contracts keep the project's working name, Coc, in their identifiers (`CocEscrow`, `CocForwarder`, `CocBadge`); the product is called Tinco.
 
 Contract v2 (per-lease deadlines) is redeployed with `npm run deploy:fuji` then `npm run deploy-badge:fuji`; the scripts write the new addresses to `contracts/deployments/fuji.json` and `web/src/lib/deployment.json`, and the app's **Transparency** page lists them with their verification status.
 
@@ -201,6 +203,6 @@ npm run deploy-badge:fuji
 
 ## Disclaimer
 
-This is a testnet prototype built for a hackathon. It has not been audited and is not legal advice. The contract is token-agnostic. Coc only holds the security deposit and never handles rent.
+This is a testnet prototype built for a hackathon. It has not been audited and is not legal advice. The contract is token-agnostic. Tinco only holds the security deposit and never handles rent.
 
 Privacy notes: photos of a room listed on **Find a room** are public, and AI damage reports send the lease's photos to the configured OpenRouter model. Evidence for unlisted leases is only reachable by its hash.
