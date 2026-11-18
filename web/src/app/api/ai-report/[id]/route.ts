@@ -11,15 +11,31 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-async function doc<T>(hash: Hex, origin: string): Promise<T | null> {
+/** Files the buyer sent with the request, kept only where the bytes match their hash. */
+function providedFiles(raw: unknown): Map<string, Buffer> {
+  const out = new Map<string, Buffer>();
+  if (!raw || typeof raw !== "object") return out;
+  for (const [hash, b64] of Object.entries(raw as Record<string, unknown>).slice(0, 40)) {
+    if (!/^0x[0-9a-f]{64}$/.test(hash) || typeof b64 !== "string") continue;
+    const bytes = Buffer.from(b64, "base64");
+    if (keccak256(bytes) === hash) out.set(hash, bytes);
+  }
+  return out;
+}
+
+/**
+ * Reads a JSON document by its on-chain hash: from the files the buyer sent (checked against the
+ * hash), otherwise from storage.
+ */
+async function doc<T>(hash: Hex, files: Map<string, Buffer>, origin: string): Promise<T | null> {
   if (hash === zeroHash) return null;
-  const f = await getFileVerified(hash, origin);
-  if (!f) {
+  const bytes = files.get(hash.toLowerCase()) ?? (await getFileVerified(hash, origin))?.bytes;
+  if (!bytes) {
     console.warn(`[ai-report] document ${hash} could not be read`);
     return null;
   }
   try {
-    return JSON.parse(f.bytes.toString("utf8")) as T;
+    return JSON.parse(bytes.toString("utf8")) as T;
   } catch {
     return null;
   }
@@ -53,7 +69,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!r) return NextResponse.json({ error: "NoRelayer" }, { status: 503 });
   // Plain GET answers 402 as x402 clients expect. Our own UI polls with ?quote=1 and gets the
   // same body with 200, so the browser console does not fill with "402" errors.
-  return NextResponse.json(paymentRequiredBody(r), { status: url.searchParams.get("quote") === "1" ? 200 : 402 });
+  // `inputs` names the documents the report is built from, so the buyer can send them along.
+  const inputs = { condition: c.L.conditionHash, landlordEvidence: c.L.landlordEvidence, tenantEvidence: c.L.tenantEvidence };
+  return NextResponse.json({ ...paymentRequiredBody(r), inputs }, { status: url.searchParams.get("quote") === "1" ? 200 : 402 });
 }
 
 /** Pays with X-PAYMENT, runs the assessment, settles the USDC on Avalanche, stores the report. */
@@ -80,11 +98,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json(paymentRequiredBody(r, (e as Error).message), { status: 402 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as { lang?: string };
+  const body = (await req.json().catch(() => ({}))) as { lang?: string; files?: unknown };
+  const files = providedFiles(body.files);
   const [condition, landlord, tenant] = await Promise.all([
-    doc<ConditionReport>(L.conditionHash, url.origin),
-    doc<Evidence>(L.landlordEvidence, url.origin),
-    doc<Evidence>(L.tenantEvidence, url.origin),
+    doc<ConditionReport>(L.conditionHash, files, url.origin),
+    doc<Evidence>(L.landlordEvidence, files, url.origin),
+    doc<Evidence>(L.tenantEvidence, files, url.origin),
   ]);
   if (!condition || !landlord) return NextResponse.json({ error: "AiNoEvidence" }, { status: 409 });
 
@@ -100,6 +119,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       contestedUsdc: formatUnits(contested, 6),
       lang: body.lang === "vi" ? "vi" : "en",
       origin: url.origin,
+      files,
     });
   } catch (e) {
     console.error(`[ai-report] lease ${id}: ${(e as Error).message}`);

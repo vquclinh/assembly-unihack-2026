@@ -23,8 +23,15 @@ export function aiConfigured() {
 
 type Part = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
-async function imagePart(hash: Hex, origin?: string): Promise<Part | null> {
-  const f = await getFileVerified(hash, origin);
+function imageType(b: Buffer) {
+  if (b[0] === 0x89 && b[1] === 0x50) return "image/png";
+  if (b.subarray(0, 4).toString("latin1") === "RIFF") return "image/webp";
+  return "image/jpeg";
+}
+
+async function imagePart(hash: Hex, i: Inputs): Promise<Part | null> {
+  const sent = i.files?.get(hash.toLowerCase());
+  const f = sent ? { bytes: sent, contentType: imageType(sent) } : await getFileVerified(hash, i.origin);
   if (!f) return null;
   return { type: "image_url", image_url: { url: `data:${f.contentType};base64,${f.bytes.toString("base64")}` } };
 }
@@ -57,6 +64,8 @@ type Inputs = {
   lang: "en" | "vi";
   /** The app's own origin, used to read files through its public route if the store misses. */
   origin?: string;
+  /** Files the buyer sent with the request, already checked against their hashes. */
+  files?: Map<string, Buffer>;
 };
 
 export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "v" | "leaseId" | "inputs" | "payment" | "createdAt">> {
@@ -82,7 +91,7 @@ export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "
     parts.push({ type: "text", text: `MOVE-IN — ${item.label}${item.note ? `: ${item.note}` : ""}` });
     for (const h of item.photos) {
       if (images >= MAX_IMAGES - 2) break;
-      const p = await imagePart(h, i.origin);
+      const p = await imagePart(h, i);
       if (p) {
         parts.push(p);
         images++;
@@ -92,7 +101,7 @@ export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "
   parts.push({ type: "text", text: `MOVE-OUT, LANDLORD'S CLAIM: ${i.landlord.text || "(no text)"}` });
   for (const h of i.landlord.photos) {
     if (images >= MAX_IMAGES) break;
-    const p = await imagePart(h, i.origin);
+    const p = await imagePart(h, i);
     if (p) {
       parts.push(p);
       images++;
@@ -102,7 +111,7 @@ export async function assessDamage(i: Inputs): Promise<Omit<AiReport, "kind" | "
     parts.push({ type: "text", text: `TENANT'S RESPONSE: ${i.tenant.text || "(no text)"}` });
     for (const h of i.tenant.photos) {
       if (images >= MAX_IMAGES) break;
-      const p = await imagePart(h, i.origin);
+      const p = await imagePart(h, i);
       if (p) {
         parts.push(p);
         images++;
