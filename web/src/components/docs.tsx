@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { type Hex, zeroHash } from "viem";
 import { fetchJson, fileUrl, uploadJson, uploadPhoto } from "@/lib/files";
 import { errorText } from "@/lib/errors";
-import { sampleFile } from "@/lib/samples";
+import { SAMPLE_ITEM_PHOTOS, sampleFile } from "@/lib/samples";
 import { useT } from "@/lib/i18n";
 import { type ConditionReport, type Evidence, type ReportItem, type Ruling, type Terms } from "@/lib/lease";
 import { Badge, Button, cx, inputCls } from "./ui";
@@ -212,7 +212,7 @@ export function ReportBuilder({ leaseId, onSubmit, busy }: { leaseId: string; on
     <div className="space-y-4">
       <SampleButton
         onClick={async () => {
-          const names = ["wall-clean.jpg", "floor.jpg", "bathroom.jpg"];
+          const names = SAMPLE_ITEM_PHOTOS;
           const files = await Promise.all(names.map(sampleFile));
           setItems(items.map((x, i) => (i < names.length ? { ...x, note: t.docs.sampleNotes[i], files: [files[i]] } : x)));
         }}

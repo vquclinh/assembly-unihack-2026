@@ -4,15 +4,18 @@ import type { Hex } from "viem";
 import { uploadJson, uploadPhoto } from "./files";
 import type { ConditionReport, Evidence } from "./lease";
 
+/** One photo per default report item: walls, floor and doors, bathroom, AC and lights, furniture. */
+export const SAMPLE_ITEM_PHOTOS = ["wall-clean.jpg", "floor.jpg", "bathroom.jpg", "ac.jpg", "furniture.jpg"];
+
 /** Bundled photos in /public/demo, so a demo never waits for a camera. */
 export async function sampleFile(name: string) {
   const res = await fetch(`/demo/${name}`);
   return new File([await res.blob()], name, { type: "image/jpeg" });
 }
 
-/** Uploads the sample move-in report (three rooms, one photo each) and returns its hash. */
+/** Uploads the sample move-in report (five items, one photo each) and returns its hash. */
 export async function sampleConditionReport(leaseId: string, labels: string[], notes: string[]): Promise<Hex> {
-  const names = ["wall-clean.jpg", "floor.jpg", "bathroom.jpg"];
+  const names = SAMPLE_ITEM_PHOTOS;
   const items = [];
   for (let i = 0; i < names.length; i++) {
     items.push({ label: labels[i] ?? names[i], note: notes[i] ?? "", photos: [await uploadPhoto(await sampleFile(names[i]))] });
