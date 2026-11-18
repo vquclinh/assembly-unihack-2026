@@ -215,16 +215,15 @@ export default function DemoPage() {
 
       setSetupStep(1);
       // The tenant pays the deposit; the mediator pays for the AI report.
-      await Promise.all(
-        [addrs.tenant, addrs.mediator].map(async (who) => {
-          const res = await fetch("/api/faucet", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ address: who }) });
-          if (!res.ok) {
-            const json = (await res.json()) as { error?: string; detail?: string };
-            // A wallet that already has enough test USDC is fine.
-            if (json.error !== "FaucetEnough") throw new AppError(json.error || "FaucetFailed", json.detail);
-          }
-        }),
-      );
+      // One request at a time: two serverless instances sending from the relayer at once can pick the same nonce.
+      for (const who of [addrs.tenant, addrs.mediator]) {
+        const res = await fetch("/api/faucet", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ address: who }) });
+        if (!res.ok) {
+          const json = (await res.json()) as { error?: string; detail?: string };
+          // A wallet that already has enough test USDC is fine.
+          if (json.error !== "FaucetEnough") throw new AppError(json.error || "FaucetFailed", json.detail);
+        }
+      }
       const next = await createLease(s, addrs, scenario);
       setSetupStep(-1);
       if (mode === "auto") play(next, 0);

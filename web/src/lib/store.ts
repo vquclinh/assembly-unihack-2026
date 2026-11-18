@@ -1,7 +1,8 @@
 import "server-only";
 import { promises as fs } from "fs";
 import path from "path";
-import { get, list, put } from "@vercel/blob";
+import { get, head, list, put } from "@vercel/blob";
+import { keccak256 } from "viem";
 
 /**
  * Storage for everything that lives off-chain.
@@ -56,19 +57,50 @@ export async function putFile(hash: string, bytes: Uint8Array, contentType: stri
 
 export async function getFile(hash: string): Promise<{ bytes: Buffer; contentType: string } | null> {
   if (blobEnabled()) {
+    // The blob CDN can answer "not found" for a while after a file is written (for example when a
+    // sample photo is uploaded again under the same hash). On a miss, ask the store API where the
+    // file is and read it past the cache.
     try {
       const res = await get(`files/${hash}`, { access: "public" });
-      if (!res || res.statusCode !== 200) return null;
-      return { bytes: await streamToBuffer(res.stream), contentType: res.blob.contentType || "application/octet-stream" };
-    } catch {
-      return null;
+      if (res && res.statusCode === 200) {
+        return { bytes: await streamToBuffer(res.stream), contentType: res.blob.contentType || "application/octet-stream" };
+      }
+    } catch (e) {
+      console.warn(`[store] get files/${hash}: ${(e as Error).message}`);
     }
+    try {
+      const meta = await head(`files/${hash}`);
+      const res = await fetch(`${meta.url}?fresh=${Date.now()}`, { cache: "no-store" });
+      if (res.ok) return { bytes: Buffer.from(await res.arrayBuffer()), contentType: meta.contentType || "application/octet-stream" };
+      console.warn(`[store] fresh read files/${hash}: HTTP ${res.status}`);
+    } catch (e) {
+      console.warn(`[store] head files/${hash}: ${(e as Error).message}`);
+    }
+    return null;
   }
   const dir = path.join(dataDir(), "files");
   try {
     const bytes = await fs.readFile(path.join(dir, hash));
     const contentType = await fs.readFile(path.join(dir, `${hash}.type`), "utf8").catch(() => "application/octet-stream");
     return { bytes, contentType };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Like getFile, but if the store misses, reads the app's own public file route (which the edge
+ * caches) and keeps the bytes only if their keccak256 matches the hash.
+ */
+export async function getFileVerified(hash: string, origin?: string): Promise<{ bytes: Buffer; contentType: string } | null> {
+  const direct = await getFile(hash);
+  if (direct || !origin) return direct;
+  try {
+    const res = await fetch(`${origin}/api/files/${hash}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (keccak256(bytes) !== hash.toLowerCase()) return null;
+    return { bytes, contentType: res.headers.get("content-type") || "application/octet-stream" };
   } catch {
     return null;
   }

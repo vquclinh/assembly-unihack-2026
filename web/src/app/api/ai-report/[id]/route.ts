@@ -4,17 +4,20 @@ import { aiConfigured, assessDamage } from "@/lib/ai";
 import { readLease } from "@/lib/chain";
 import { isDeployed } from "@/lib/config";
 import { type AiReport, type ConditionReport, type Evidence, type Lease, Status } from "@/lib/lease";
-import { getFile, getRecord, putFile, putRecord } from "@/lib/store";
+import { getFileVerified, getRecord, putFile, putRecord } from "@/lib/store";
 import { paymentRequiredBody, paymentResponseHeader, requirements, settlePayment, verifyPayment } from "@/lib/x402";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-async function doc<T>(hash: Hex): Promise<T | null> {
+async function doc<T>(hash: Hex, origin: string): Promise<T | null> {
   if (hash === zeroHash) return null;
-  const f = await getFile(hash);
-  if (!f) return null;
+  const f = await getFileVerified(hash, origin);
+  if (!f) {
+    console.warn(`[ai-report] document ${hash} could not be read`);
+    return null;
+  }
   try {
     return JSON.parse(f.bytes.toString("utf8")) as T;
   } catch {
@@ -79,9 +82,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const body = (await req.json().catch(() => ({}))) as { lang?: string };
   const [condition, landlord, tenant] = await Promise.all([
-    doc<ConditionReport>(L.conditionHash),
-    doc<Evidence>(L.landlordEvidence),
-    doc<Evidence>(L.tenantEvidence),
+    doc<ConditionReport>(L.conditionHash, url.origin),
+    doc<Evidence>(L.landlordEvidence, url.origin),
+    doc<Evidence>(L.tenantEvidence, url.origin),
   ]);
   if (!condition || !landlord) return NextResponse.json({ error: "AiNoEvidence" }, { status: 409 });
 
@@ -96,6 +99,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       tenant,
       contestedUsdc: formatUnits(contested, 6),
       lang: body.lang === "vi" ? "vi" : "en",
+      origin: url.origin,
     });
   } catch (e) {
     console.error(`[ai-report] lease ${id}: ${(e as Error).message}`);
