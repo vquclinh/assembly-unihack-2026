@@ -3,6 +3,13 @@
 **A neutral rental deposit escrow for students, running on Avalanche.**
 Team Assembly, Team1 Vietnam UniHack 2026: Quoc-Linh Vo, Faculty of Information Technology, University of Science, VNU-HCM.
 
+| | |
+|---|---|
+| **Demo video (2:44)** | https://youtu.be/a-UfakoDMwY |
+| **Live app** | https://assembly-unihack-2026.vercel.app (judge demo: [/demo](https://assembly-unihack-2026.vercel.app/demo)) |
+| **Pitch slides** | https://canva.link/bwn6x2ss2vvqq1m |
+| **Escrow on Fuji** | [0xfE76826F02d2251A054C4272C78753E657B1FfD4](https://testnet.snowtrace.io/address/0xfE76826F02d2251A054C4272C78753E657B1FfD4) |
+
 Full project proposal (target users, Vietnam context, solution, legal analysis): [docs/PROPOSAL.md](docs/PROPOSAL.md) · [PDF](docs/PROPOSAL.pdf)
 
 *"Tinco" joins the Vietnamese words "tin" (trust) and "cọc" (deposit): a deposit both sides can trust.* The deposit sits in a smart contract instead of in the landlord's pocket. Nobody, not the mediator and not the team that built this, can send it anywhere except to the tenant or the landlord.

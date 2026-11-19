@@ -291,11 +291,11 @@ Delivered so far:
 
 | Contract | Address |
 |---|---|
-| CocEscrow | [`0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3`](https://testnet.snowtrace.io/address/0xE0D792A2f68545599a4502aFAeAf8B0f85881Dc3) |
-| CocForwarder | [`0xa147258E8C60fb29599F088aCCc74B97981865a8`](https://testnet.snowtrace.io/address/0xa147258E8C60fb29599F088aCCc74B97981865a8) |
-| CocBadge | [`0x8C5EA878bE96ADA142349283a50fc3AEF3e63551`](https://testnet.snowtrace.io/address/0x8C5EA878bE96ADA142349283a50fc3AEF3e63551) |
-| MockUSDC (test token, EIP-3009) | [`0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87`](https://testnet.snowtrace.io/address/0xd3e4a40Cc1A29DC6908A3f45E35bE0a8904eDE87) |
-| DemoYieldVault (ERC-4626) | [`0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6`](https://testnet.snowtrace.io/address/0xF2AFcffC92b3DF5cf19f89B3be976CD40b9D55F6) |
+| CocEscrow | [`0xfE76826F02d2251A054C4272C78753E657B1FfD4`](https://testnet.snowtrace.io/address/0xfE76826F02d2251A054C4272C78753E657B1FfD4) |
+| CocForwarder | [`0x1bD5980438b65cC76F34182a1b11e9884379B029`](https://testnet.snowtrace.io/address/0x1bD5980438b65cC76F34182a1b11e9884379B029) |
+| CocBadge | [`0x969DA71BD8eaB2bB658DEce059a1fEFf5Ee6C9E7`](https://testnet.snowtrace.io/address/0x969DA71BD8eaB2bB658DEce059a1fEFf5Ee6C9E7) |
+| MockUSDC (test token, EIP-3009) | [`0x1f5f6616aB5b67393D69D41D21dBc8D0B2D6Cbf1`](https://testnet.snowtrace.io/address/0x1f5f6616aB5b67393D69D41D21dBc8D0B2D6Cbf1) |
+| DemoYieldVault (ERC-4626) | [`0xe1E0146A6D0f97d6aBaC5A438E467cA6243c32Ff`](https://testnet.snowtrace.io/address/0xe1E0146A6D0f97d6aBaC5A438E467cA6243c32Ff) |
 
 The contracts keep the project's working name, Coc, in their identifiers (for example `CocEscrow`), since renaming them would mean redeploying and re-verifying them.
 
